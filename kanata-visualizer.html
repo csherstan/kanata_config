@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kanata Configuration Visualizer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .controls {
+            padding: 20px 30px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #667eea;
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .btn-secondary:hover {
+            box-shadow: 0 4px 12px rgba(108, 117, 125, 0.4);
+        }
+
+        .btn-success {
+            background: #28a745;
+        }
+
+        .btn-success:hover {
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .layout-selector {
+            display: flex;
+            gap: 15px;
+            margin-left: auto;
+            align-items: center;
+        }
+
+        .layout-selector label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .layout-selector input[type="radio"] {
+            cursor: pointer;
+        }
+
+        .layers {
+            padding: 20px 30px;
+            background: white;
+            border-bottom: 2px solid #e9ecef;
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+        }
+
+        .layer-tab {
+            padding: 10px 20px;
+            border: 2px solid #dee2e6;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+            white-space: nowrap;
+            position: relative;
+            background: white;
+        }
+
+        .layer-tab:hover {
+            border-color: #667eea;
+            background: #f8f9fa;
+        }
+
+        .layer-tab.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .layer-tab .delete-btn {
+            display: none;
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        .layer-tab:hover .delete-btn {
+            display: block;
+        }
+
+        .layer-tab-add {
+            background: #28a745;
+            color: white;
+            border-color: #28a745;
+        }
+
+        .keyboard-container {
+            padding: 40px;
+            background: #f8f9fa;
+            min-height: 400px;
+        }
+
+        .keyboard {
+            display: grid;
+            gap: 4px;
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #343a40;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .key {
+            background: white;
+            border: 2px solid #dee2e6;
+            border-radius: 4px;
+            padding: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 45px;
+            position: relative;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .key:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            z-index: 10;
+        }
+
+        .key.modified {
+            background: #e3f2fd;
+            border-color: #2196f3;
+        }
+
+        .key.layer-switch {
+            background: #e8f5e9;
+            border-color: #4caf50;
+        }
+
+        .key.tap-hold {
+            background: #f3e5f5;
+            border-color: #9c27b0;
+        }
+
+        .key.transparent {
+            background: #f5f5f5;
+            border-color: #bdbdbd;
+            opacity: 0.6;
+        }
+
+        .key-label {
+            font-size: 9px;
+            color: #666;
+            margin-bottom: 2px;
+        }
+
+        .key-action {
+            font-size: 11px;
+            font-weight: 700;
+            color: #000;
+            word-break: break-all;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            font-size: 1.5em;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: #667eea;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #495057;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 25px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+        }
+
+        .empty-state h2 {
+            font-size: 1.8em;
+            margin-bottom: 15px;
+        }
+
+        .empty-state p {
+            font-size: 1.1em;
+            margin-bottom: 20px;
+        }
+
+        .info-box {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 20px 30px;
+        }
+
+        .info-box h3 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+
+        .info-box p {
+            color: #856404;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Kanata Configuration Visualizer</h1>
+            <p>Load, visualize, and edit your Kanata keyboard configurations</p>
+        </header>
+
+        <div class="controls">
+            <button class="btn" onclick="document.getElementById('fileInput').click()">Load Config</button>
+            <input type="file" id="fileInput" accept=".kbd" onchange="loadFile(event)">
+            <button class="btn btn-success" onclick="downloadConfig()">Download Config</button>
+            <button class="btn btn-secondary" onclick="createSampleConfig()">Load Sample</button>
+
+            <div class="layout-selector">
+                <span>Layout:</span>
+                <label>
+                    <input type="radio" name="layout" value="ansi" checked onchange="switchLayout('ansi')">
+                    ANSI
+                </label>
+                <label>
+                    <input type="radio" name="layout" value="iso" onchange="switchLayout('iso')">
+                    ISO
+                </label>
+            </div>
+        </div>
+
+        <div id="layersContainer" class="layers" style="display: none;"></div>
+
+        <div class="keyboard-container">
+            <div id="emptyState" class="empty-state">
+                <h2>No Configuration Loaded</h2>
+                <p>Load an existing Kanata config file or create a sample configuration to get started</p>
+                <button class="btn" onclick="createSampleConfig()">Create Sample Config</button>
+            </div>
+            <div id="keyboard" class="keyboard" style="display: none;"></div>
+        </div>
+    </div>
+
+    <div id="keyModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Edit Key Mapping</div>
+            <div class="form-group">
+                <label>Key Position</label>
+                <input type="text" id="keyLabel" readonly>
+            </div>
+            <div class="form-group">
+                <label>Action Type</label>
+                <select id="actionType" onchange="updateActionFields()">
+                    <option value="basic">Basic Key</option>
+                    <option value="layer-switch">Layer Switch (Persistent)</option>
+                    <option value="layer-while-held">Layer While Held</option>
+                    <option value="tap-hold">Tap-Hold</option>
+                    <option value="transparent">Transparent</option>
+                    <option value="alias">Alias Reference</option>
+                </select>
+            </div>
+            <div id="actionFields"></div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeKeyModal()">Cancel</button>
+                <button class="btn" onclick="saveKeyMapping()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="layerModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">New Layer</div>
+            <div class="form-group">
+                <label>Layer Name</label>
+                <input type="text" id="newLayerName" placeholder="e.g., numbers, symbols">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeLayerModal()">Cancel</button>
+                <button class="btn" onclick="saveNewLayer()">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== STATE MANAGEMENT ====================
+        const state = {
+            config: {
+                defsrc: [],
+                layers: {},
+                aliases: {}
+            },
+            ui: {
+                activeLayer: 'base',
+                keyboardLayout: 'ansi',
+                editingKeyIndex: null
+            }
+        };
+
+        // ==================== KEYBOARD LAYOUTS ====================
+        const KEYBOARD_LAYOUTS = {
+            ansi: {
+                rows: 6,
+                cols: 15,
+                keys: [
+                    // Row 1
+                    { code: 'esc', row: 1, col: 1, width: 1 },
+                    { code: 'f1', row: 1, col: 3, width: 1 },
+                    { code: 'f2', row: 1, col: 4, width: 1 },
+                    { code: 'f3', row: 1, col: 5, width: 1 },
+                    { code: 'f4', row: 1, col: 6, width: 1 },
+                    { code: 'f5', row: 1, col: 7, width: 1 },
+                    { code: 'f6', row: 1, col: 8, width: 1 },
+                    { code: 'f7', row: 1, col: 9, width: 1 },
+                    { code: 'f8', row: 1, col: 10, width: 1 },
+                    { code: 'f9', row: 1, col: 11, width: 1 },
+                    { code: 'f10', row: 1, col: 12, width: 1 },
+                    { code: 'f11', row: 1, col: 13, width: 1 },
+                    { code: 'f12', row: 1, col: 14, width: 1 },
+                    { code: 'prnt', row: 1, col: 15, width: 1 },
+
+                    // Row 2
+                    { code: 'grv', row: 2, col: 1, width: 1 },
+                    { code: '1', row: 2, col: 2, width: 1 },
+                    { code: '2', row: 2, col: 3, width: 1 },
+                    { code: '3', row: 2, col: 4, width: 1 },
+                    { code: '4', row: 2, col: 5, width: 1 },
+                    { code: '5', row: 2, col: 6, width: 1 },
+                    { code: '6', row: 2, col: 7, width: 1 },
+                    { code: '7', row: 2, col: 8, width: 1 },
+                    { code: '8', row: 2, col: 9, width: 1 },
+                    { code: '9', row: 2, col: 10, width: 1 },
+                    { code: '0', row: 2, col: 11, width: 1 },
+                    { code: 'min', row: 2, col: 12, width: 1 },
+                    { code: 'eql', row: 2, col: 13, width: 1 },
+                    { code: 'bspc', row: 2, col: 14, width: 2 },
+
+                    // Row 3
+                    { code: 'tab', row: 3, col: 1, width: 1.5 },
+                    { code: 'q', row: 3, col: 2.5, width: 1 },
+                    { code: 'w', row: 3, col: 3.5, width: 1 },
+                    { code: 'e', row: 3, col: 4.5, width: 1 },
+                    { code: 'r', row: 3, col: 5.5, width: 1 },
+                    { code: 't', row: 3, col: 6.5, width: 1 },
+                    { code: 'y', row: 3, col: 7.5, width: 1 },
+                    { code: 'u', row: 3, col: 8.5, width: 1 },
+                    { code: 'i', row: 3, col: 9.5, width: 1 },
+                    { code: 'o', row: 3, col: 10.5, width: 1 },
+                    { code: 'p', row: 3, col: 11.5, width: 1 },
+                    { code: 'lbrc', row: 3, col: 12.5, width: 1 },
+                    { code: 'rbrc', row: 3, col: 13.5, width: 1 },
+                    { code: 'bsls', row: 3, col: 14.5, width: 1.5 },
+
+                    // Row 4
+                    { code: 'caps', row: 4, col: 1, width: 1.75 },
+                    { code: 'a', row: 4, col: 2.75, width: 1 },
+                    { code: 's', row: 4, col: 3.75, width: 1 },
+                    { code: 'd', row: 4, col: 4.75, width: 1 },
+                    { code: 'f', row: 4, col: 5.75, width: 1 },
+                    { code: 'g', row: 4, col: 6.75, width: 1 },
+                    { code: 'h', row: 4, col: 7.75, width: 1 },
+                    { code: 'j', row: 4, col: 8.75, width: 1 },
+                    { code: 'k', row: 4, col: 9.75, width: 1 },
+                    { code: 'l', row: 4, col: 10.75, width: 1 },
+                    { code: 'scln', row: 4, col: 11.75, width: 1 },
+                    { code: 'apo', row: 4, col: 12.75, width: 1 },
+                    { code: 'ret', row: 4, col: 13.75, width: 2.25 },
+
+                    // Row 5
+                    { code: 'lsft', row: 5, col: 1, width: 2.25 },
+                    { code: 'z', row: 5, col: 3.25, width: 1 },
+                    { code: 'x', row: 5, col: 4.25, width: 1 },
+                    { code: 'c', row: 5, col: 5.25, width: 1 },
+                    { code: 'v', row: 5, col: 6.25, width: 1 },
+                    { code: 'b', row: 5, col: 7.25, width: 1 },
+                    { code: 'n', row: 5, col: 8.25, width: 1 },
+                    { code: 'm', row: 5, col: 9.25, width: 1 },
+                    { code: 'comm', row: 5, col: 10.25, width: 1 },
+                    { code: 'dot', row: 5, col: 11.25, width: 1 },
+                    { code: 'slsh', row: 5, col: 12.25, width: 1 },
+                    { code: 'rsft', row: 5, col: 13.25, width: 2.75 },
+
+                    // Row 6
+                    { code: 'lctl', row: 6, col: 1, width: 1.25 },
+                    { code: 'lmet', row: 6, col: 2.25, width: 1.25 },
+                    { code: 'lalt', row: 6, col: 3.5, width: 1.25 },
+                    { code: 'spc', row: 6, col: 4.75, width: 6.25 },
+                    { code: 'ralt', row: 6, col: 11, width: 1.25 },
+                    { code: 'rmet', row: 6, col: 12.25, width: 1.25 },
+                    { code: 'rctl', row: 6, col: 13.5, width: 1.25 },
+                ]
+            },
+            iso: {
+                rows: 6,
+                cols: 15,
+                keys: [
+                    // Row 1 (same as ANSI)
+                    { code: 'esc', row: 1, col: 1, width: 1 },
+                    { code: 'f1', row: 1, col: 3, width: 1 },
+                    { code: 'f2', row: 1, col: 4, width: 1 },
+                    { code: 'f3', row: 1, col: 5, width: 1 },
+                    { code: 'f4', row: 1, col: 6, width: 1 },
+                    { code: 'f5', row: 1, col: 7, width: 1 },
+                    { code: 'f6', row: 1, col: 8, width: 1 },
+                    { code: 'f7', row: 1, col: 9, width: 1 },
+                    { code: 'f8', row: 1, col: 10, width: 1 },
+                    { code: 'f9', row: 1, col: 11, width: 1 },
+                    { code: 'f10', row: 1, col: 12, width: 1 },
+                    { code: 'f11', row: 1, col: 13, width: 1 },
+                    { code: 'f12', row: 1, col: 14, width: 1 },
+                    { code: 'prnt', row: 1, col: 15, width: 1 },
+
+                    // Row 2 (same as ANSI)
+                    { code: 'grv', row: 2, col: 1, width: 1 },
+                    { code: '1', row: 2, col: 2, width: 1 },
+                    { code: '2', row: 2, col: 3, width: 1 },
+                    { code: '3', row: 2, col: 4, width: 1 },
+                    { code: '4', row: 2, col: 5, width: 1 },
+                    { code: '5', row: 2, col: 6, width: 1 },
+                    { code: '6', row: 2, col: 7, width: 1 },
+                    { code: '7', row: 2, col: 8, width: 1 },
+                    { code: '8', row: 2, col: 9, width: 1 },
+                    { code: '9', row: 2, col: 10, width: 1 },
+                    { code: '0', row: 2, col: 11, width: 1 },
+                    { code: 'min', row: 2, col: 12, width: 1 },
+                    { code: 'eql', row: 2, col: 13, width: 1 },
+                    { code: 'bspc', row: 2, col: 14, width: 2 },
+
+                    // Row 3 (ISO has different backslash position)
+                    { code: 'tab', row: 3, col: 1, width: 1.5 },
+                    { code: 'q', row: 3, col: 2.5, width: 1 },
+                    { code: 'w', row: 3, col: 3.5, width: 1 },
+                    { code: 'e', row: 3, col: 4.5, width: 1 },
+                    { code: 'r', row: 3, col: 5.5, width: 1 },
+                    { code: 't', row: 3, col: 6.5, width: 1 },
+                    { code: 'y', row: 3, col: 7.5, width: 1 },
+                    { code: 'u', row: 3, col: 8.5, width: 1 },
+                    { code: 'i', row: 3, col: 9.5, width: 1 },
+                    { code: 'o', row: 3, col: 10.5, width: 1 },
+                    { code: 'p', row: 3, col: 11.5, width: 1 },
+                    { code: 'lbrc', row: 3, col: 12.5, width: 1 },
+                    { code: 'rbrc', row: 3, col: 13.5, width: 1 },
+
+                    // Row 4 (ISO has shorter Enter and additional key)
+                    { code: 'caps', row: 4, col: 1, width: 1.75 },
+                    { code: 'a', row: 4, col: 2.75, width: 1 },
+                    { code: 's', row: 4, col: 3.75, width: 1 },
+                    { code: 'd', row: 4, col: 4.75, width: 1 },
+                    { code: 'f', row: 4, col: 5.75, width: 1 },
+                    { code: 'g', row: 4, col: 6.75, width: 1 },
+                    { code: 'h', row: 4, col: 7.75, width: 1 },
+                    { code: 'j', row: 4, col: 8.75, width: 1 },
+                    { code: 'k', row: 4, col: 9.75, width: 1 },
+                    { code: 'l', row: 4, col: 10.75, width: 1 },
+                    { code: 'scln', row: 4, col: 11.75, width: 1 },
+                    { code: 'apo', row: 4, col: 12.75, width: 1 },
+                    { code: 'nuhs', row: 4, col: 13.75, width: 1 },
+                    { code: 'ret', row: 4, col: 14.75, width: 1.25 },
+
+                    // Row 5 (ISO has additional key)
+                    { code: 'lsft', row: 5, col: 1, width: 1.25 },
+                    { code: 'nubs', row: 5, col: 2.25, width: 1 },
+                    { code: 'z', row: 5, col: 3.25, width: 1 },
+                    { code: 'x', row: 5, col: 4.25, width: 1 },
+                    { code: 'c', row: 5, col: 5.25, width: 1 },
+                    { code: 'v', row: 5, col: 6.25, width: 1 },
+                    { code: 'b', row: 5, col: 7.25, width: 1 },
+                    { code: 'n', row: 5, col: 8.25, width: 1 },
+                    { code: 'm', row: 5, col: 9.25, width: 1 },
+                    { code: 'comm', row: 5, col: 10.25, width: 1 },
+                    { code: 'dot', row: 5, col: 11.25, width: 1 },
+                    { code: 'slsh', row: 5, col: 12.25, width: 1 },
+                    { code: 'rsft', row: 5, col: 13.25, width: 2.75 },
+
+                    // Row 6 (same as ANSI)
+                    { code: 'lctl', row: 6, col: 1, width: 1.25 },
+                    { code: 'lmet', row: 6, col: 2.25, width: 1.25 },
+                    { code: 'lalt', row: 6, col: 3.5, width: 1.25 },
+                    { code: 'spc', row: 6, col: 4.75, width: 6.25 },
+                    { code: 'ralt', row: 6, col: 11, width: 1.25 },
+                    { code: 'rmet', row: 6, col: 12.25, width: 1.25 },
+                    { code: 'rctl', row: 6, col: 13.5, width: 1.25 },
+                ]
+            }
+        };
+
+        // ==================== CONFIG PARSER ====================
+        function tokenize(text) {
+            // Remove comments
+            text = text.replace(/;;[^\n]*/g, '');
+            text = text.replace(/#\|[\s\S]*?\|#/g, '');
+
+            const tokens = [];
+            let current = '';
+            let inString = false;
+
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+
+                if (char === '"') {
+                    inString = !inString;
+                    current += char;
+                } else if (inString) {
+                    current += char;
+                } else if (char === '(' || char === ')') {
+                    if (current.trim()) {
+                        tokens.push(current.trim());
+                        current = '';
+                    }
+                    tokens.push(char);
+                } else if (/\s/.test(char)) {
+                    if (current.trim()) {
+                        tokens.push(current.trim());
+                        current = '';
+                    }
+                } else {
+                    current += char;
+                }
+            }
+
+            if (current.trim()) {
+                tokens.push(current.trim());
+            }
+
+            return tokens;
+        }
+
+        function parseExpression(tokens, index) {
+            if (tokens[index] !== '(') {
+                return { value: tokens[index], next: index + 1 };
+            }
+
+            const expr = [];
+            index++; // skip opening paren
+
+            while (index < tokens.length && tokens[index] !== ')') {
+                const result = parseExpression(tokens, index);
+                expr.push(result.value);
+                index = result.next;
+            }
+
+            return { value: expr, next: index + 1 }; // skip closing paren
+        }
+
+        function parseConfig(text) {
+            const tokens = tokenize(text);
+            const config = {
+                defsrc: [],
+                layers: {},
+                aliases: {}
+            };
+
+            let i = 0;
+            while (i < tokens.length) {
+                const result = parseExpression(tokens, i);
+                const expr = result.value;
+                i = result.next;
+
+                if (Array.isArray(expr) && expr.length > 0) {
+                    const command = expr[0];
+
+                    if (command === 'defsrc') {
+                        config.defsrc = expr.slice(1);
+                    } else if (command === 'deflayer') {
+                        const layerName = expr[1];
+                        config.layers[layerName] = expr.slice(2);
+                    } else if (command === 'defalias') {
+                        for (let j = 1; j < expr.length; j += 2) {
+                            const aliasName = expr[j];
+                            const aliasValue = expr[j + 1];
+                            config.aliases[aliasName] = Array.isArray(aliasValue)
+                                ? '(' + aliasValue.join(' ') + ')'
+                                : aliasValue;
+                        }
+                    }
+                }
+            }
+
+            return config;
+        }
+
+        // ==================== CONFIG GENERATOR ====================
+        function generateConfig(config) {
+            let output = ';; Generated by Kanata Configuration Visualizer\n\n';
+
+            // Generate defsrc
+            if (config.defsrc && config.defsrc.length > 0) {
+                output += '(defsrc\n  ';
+                output += config.defsrc.join(' ');
+                output += '\n)\n\n';
+            }
+
+            // Generate aliases
+            if (Object.keys(config.aliases).length > 0) {
+                output += '(defalias\n';
+                for (const [name, value] of Object.entries(config.aliases)) {
+                    output += `  ${name} ${value}\n`;
+                }
+                output += ')\n\n';
+            }
+
+            // Generate layers
+            for (const [layerName, actions] of Object.entries(config.layers)) {
+                output += `(deflayer ${layerName}\n  `;
+                output += actions.join(' ');
+                output += '\n)\n\n';
+            }
+
+            return output;
+        }
+
+        // ==================== KEYBOARD RENDERER ====================
+        function renderKeyboard() {
+            const keyboard = document.getElementById('keyboard');
+            const layout = KEYBOARD_LAYOUTS[state.ui.keyboardLayout];
+            const currentLayer = state.config.layers[state.ui.activeLayer];
+
+            if (!currentLayer || state.config.defsrc.length === 0) {
+                keyboard.style.display = 'none';
+                document.getElementById('emptyState').style.display = 'block';
+                return;
+            }
+
+            keyboard.style.display = 'grid';
+            document.getElementById('emptyState').style.display = 'none';
+            keyboard.innerHTML = '';
+
+            // Set up grid
+            keyboard.style.gridTemplateColumns = `repeat(${layout.cols * 4}, 1fr)`;
+            keyboard.style.gridTemplateRows = `repeat(${layout.rows}, 1fr)`;
+
+            // Render keys
+            layout.keys.forEach((keyDef, visualIndex) => {
+                const defsrcIndex = state.config.defsrc.indexOf(keyDef.code);
+                const action = defsrcIndex >= 0 ? currentLayer[defsrcIndex] : keyDef.code;
+
+                const keyEl = document.createElement('div');
+                keyEl.className = 'key';
+                keyEl.style.gridColumn = `${Math.floor(keyDef.col * 4)} / span ${Math.floor(keyDef.width * 4)}`;
+                keyEl.style.gridRow = keyDef.row;
+
+                // Add styling based on action
+                if (defsrcIndex >= 0) {
+                    if (action !== keyDef.code) {
+                        if (action === '_' || action === 'XX') {
+                            keyEl.classList.add('transparent');
+                        } else if (action.startsWith('@')) {
+                            const aliasValue = state.config.aliases[action.substring(1)];
+                            if (aliasValue && aliasValue.includes('layer')) {
+                                keyEl.classList.add('layer-switch');
+                            } else {
+                                keyEl.classList.add('modified');
+                            }
+                        } else if (typeof action === 'string' && action.includes('layer')) {
+                            keyEl.classList.add('layer-switch');
+                        } else if (typeof action === 'string' && action.includes('tap-hold')) {
+                            keyEl.classList.add('tap-hold');
+                        } else {
+                            keyEl.classList.add('modified');
+                        }
+                    }
+                }
+
+                keyEl.innerHTML = `
+                    <div class="key-label">${keyDef.code}</div>
+                    <div class="key-action">${formatAction(action)}</div>
+                `;
+
+                keyEl.onclick = () => openKeyModal(defsrcIndex >= 0 ? defsrcIndex : -1, keyDef.code);
+                keyboard.appendChild(keyEl);
+            });
+        }
+
+        function formatAction(action) {
+            if (!action) return '';
+            if (action === '_' || action === 'XX') return '⊘';
+            if (typeof action === 'string') {
+                if (action.startsWith('(') && action.endsWith(')')) {
+                    const match = action.match(/\((\w+)/);
+                    return match ? match[1] : action;
+                }
+                return action;
+            }
+            return action.toString().substring(0, 8);
+        }
+
+        // ==================== LAYER MANAGEMENT ====================
+        function renderLayers() {
+            const container = document.getElementById('layersContainer');
+
+            if (Object.keys(state.config.layers).length === 0) {
+                container.style.display = 'none';
+                return;
+            }
+
+            container.style.display = 'flex';
+            container.innerHTML = '';
+
+            for (const layerName of Object.keys(state.config.layers)) {
+                const tab = document.createElement('div');
+                tab.className = 'layer-tab';
+                if (layerName === state.ui.activeLayer) {
+                    tab.classList.add('active');
+                }
+                tab.textContent = layerName;
+                tab.onclick = () => switchLayer(layerName);
+
+                if (Object.keys(state.config.layers).length > 1) {
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'delete-btn';
+                    deleteBtn.textContent = '×';
+                    deleteBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        deleteLayer(layerName);
+                    };
+                    tab.appendChild(deleteBtn);
+                }
+
+                container.appendChild(tab);
+            }
+
+            // Add new layer button
+            const addTab = document.createElement('div');
+            addTab.className = 'layer-tab layer-tab-add';
+            addTab.textContent = '+ New Layer';
+            addTab.onclick = openLayerModal;
+            container.appendChild(addTab);
+        }
+
+        function switchLayer(layerName) {
+            state.ui.activeLayer = layerName;
+            renderLayers();
+            renderKeyboard();
+        }
+
+        function deleteLayer(layerName) {
+            if (Object.keys(state.config.layers).length <= 1) {
+                alert('Cannot delete the last layer');
+                return;
+            }
+
+            if (!confirm(`Delete layer "${layerName}"?`)) {
+                return;
+            }
+
+            delete state.config.layers[layerName];
+
+            if (state.ui.activeLayer === layerName) {
+                state.ui.activeLayer = Object.keys(state.config.layers)[0];
+            }
+
+            renderLayers();
+            renderKeyboard();
+        }
+
+        function openLayerModal() {
+            document.getElementById('layerModal').classList.add('active');
+            document.getElementById('newLayerName').value = '';
+        }
+
+        function closeLayerModal() {
+            document.getElementById('layerModal').classList.remove('active');
+        }
+
+        function saveNewLayer() {
+            const name = document.getElementById('newLayerName').value.trim();
+
+            if (!name) {
+                alert('Please enter a layer name');
+                return;
+            }
+
+            if (state.config.layers[name]) {
+                alert('A layer with this name already exists');
+                return;
+            }
+
+            // Create new layer with all transparent keys
+            state.config.layers[name] = state.config.defsrc.map(() => '_');
+            state.ui.activeLayer = name;
+
+            closeLayerModal();
+            renderLayers();
+            renderKeyboard();
+        }
+
+        // ==================== KEY EDITING ====================
+        function openKeyModal(defsrcIndex, keyCode) {
+            if (defsrcIndex < 0) {
+                alert('This key is not in the defsrc. Add it to defsrc first to configure it.');
+                return;
+            }
+
+            state.ui.editingKeyIndex = defsrcIndex;
+
+            const modal = document.getElementById('keyModal');
+            const action = state.config.layers[state.ui.activeLayer][defsrcIndex];
+
+            document.getElementById('keyLabel').value = state.config.defsrc[defsrcIndex];
+
+            // Determine action type
+            let actionType = 'basic';
+            if (action === '_' || action === 'XX') {
+                actionType = 'transparent';
+            } else if (action && action.startsWith('@')) {
+                actionType = 'alias';
+            } else if (action && typeof action === 'string' && action.includes('layer-switch')) {
+                actionType = 'layer-switch';
+            } else if (action && typeof action === 'string' && action.includes('layer-while-held')) {
+                actionType = 'layer-while-held';
+            } else if (action && typeof action === 'string' && action.includes('tap-hold')) {
+                actionType = 'tap-hold';
+            }
+
+            document.getElementById('actionType').value = actionType;
+            updateActionFields();
+
+            // Populate fields based on current action
+            if (actionType === 'basic') {
+                document.getElementById('basicKey').value = action || '';
+            } else if (actionType === 'alias') {
+                document.getElementById('aliasName').value = action ? action.substring(1) : '';
+            } else if (actionType === 'layer-switch' || actionType === 'layer-while-held') {
+                const match = action.match(/\(layer-(?:switch|while-held)\s+(\w+)\)/);
+                if (match) {
+                    document.getElementById('targetLayer').value = match[1];
+                }
+            } else if (actionType === 'tap-hold') {
+                const match = action.match(/\(tap-hold\s+(\d+)\s+(\S+)\s+(.+)\)/);
+                if (match) {
+                    document.getElementById('tapHoldTimeout').value = match[1];
+                    document.getElementById('tapAction').value = match[2];
+                    document.getElementById('holdAction').value = match[3];
+                }
+            }
+
+            modal.classList.add('active');
+        }
+
+        function closeKeyModal() {
+            document.getElementById('keyModal').classList.remove('active');
+        }
+
+        function updateActionFields() {
+            const actionType = document.getElementById('actionType').value;
+            const fieldsContainer = document.getElementById('actionFields');
+
+            let html = '';
+
+            if (actionType === 'basic') {
+                html = `
+                    <div class="form-group">
+                        <label>Key Code</label>
+                        <input type="text" id="basicKey" placeholder="e.g., a, ret, spc">
+                    </div>
+                `;
+            } else if (actionType === 'layer-switch' || actionType === 'layer-while-held') {
+                const layers = Object.keys(state.config.layers);
+                html = `
+                    <div class="form-group">
+                        <label>Target Layer</label>
+                        <select id="targetLayer">
+                            ${layers.map(l => `<option value="${l}">${l}</option>`).join('')}
+                        </select>
+                    </div>
+                `;
+            } else if (actionType === 'tap-hold') {
+                html = `
+                    <div class="form-group">
+                        <label>Timeout (ms)</label>
+                        <input type="number" id="tapHoldTimeout" value="200">
+                    </div>
+                    <div class="form-group">
+                        <label>Tap Action</label>
+                        <input type="text" id="tapAction" placeholder="e.g., a">
+                    </div>
+                    <div class="form-group">
+                        <label>Hold Action</label>
+                        <input type="text" id="holdAction" placeholder="e.g., lctl">
+                    </div>
+                `;
+            } else if (actionType === 'alias') {
+                html = `
+                    <div class="form-group">
+                        <label>Alias Name (without @)</label>
+                        <input type="text" id="aliasName" placeholder="e.g., lyr">
+                    </div>
+                `;
+            }
+
+            fieldsContainer.innerHTML = html;
+        }
+
+        function saveKeyMapping() {
+            const actionType = document.getElementById('actionType').value;
+            let action = '';
+
+            if (actionType === 'transparent') {
+                action = '_';
+            } else if (actionType === 'basic') {
+                action = document.getElementById('basicKey').value.trim();
+            } else if (actionType === 'layer-switch') {
+                const layer = document.getElementById('targetLayer').value;
+                action = `(layer-switch ${layer})`;
+            } else if (actionType === 'layer-while-held') {
+                const layer = document.getElementById('targetLayer').value;
+                action = `(layer-while-held ${layer})`;
+            } else if (actionType === 'tap-hold') {
+                const timeout = document.getElementById('tapHoldTimeout').value;
+                const tap = document.getElementById('tapAction').value.trim();
+                const hold = document.getElementById('holdAction').value.trim();
+                action = `(tap-hold ${timeout} ${tap} ${hold})`;
+            } else if (actionType === 'alias') {
+                const name = document.getElementById('aliasName').value.trim();
+                action = `@${name}`;
+            }
+
+            if (!action) {
+                alert('Please provide a valid action');
+                return;
+            }
+
+            state.config.layers[state.ui.activeLayer][state.ui.editingKeyIndex] = action;
+
+            closeKeyModal();
+            renderKeyboard();
+        }
+
+        // ==================== FILE OPERATIONS ====================
+        function loadFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const config = parseConfig(e.target.result);
+
+                    if (!config.defsrc || config.defsrc.length === 0) {
+                        alert('Invalid config: no defsrc found');
+                        return;
+                    }
+
+                    if (Object.keys(config.layers).length === 0) {
+                        alert('Invalid config: no layers found');
+                        return;
+                    }
+
+                    state.config = config;
+                    state.ui.activeLayer = Object.keys(config.layers)[0];
+
+                    renderLayers();
+                    renderKeyboard();
+                } catch (error) {
+                    alert('Error parsing config: ' + error.message);
+                    console.error(error);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function downloadConfig() {
+            if (!state.config.defsrc || state.config.defsrc.length === 0) {
+                alert('No configuration to download');
+                return;
+            }
+
+            const configText = generateConfig(state.config);
+            const blob = new Blob([configText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'kanata-config.kbd';
+            a.click();
+
+            URL.revokeObjectURL(url);
+        }
+
+        function createSampleConfig() {
+            // Create a simple sample configuration
+            const sampleConfig = {
+                defsrc: ['grv', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'min', 'eql', 'bspc',
+                        'tab', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', 'lbrc', 'rbrc', 'bsls',
+                        'caps', 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'scln', 'apo', 'ret',
+                        'lsft', 'z', 'x', 'c', 'v', 'b', 'n', 'm', 'comm', 'dot', 'slsh', 'rsft',
+                        'lctl', 'lmet', 'lalt', 'spc', 'ralt', 'rmet', 'rctl'],
+                layers: {
+                    base: ['grv', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'min', 'eql', 'bspc',
+                          'tab', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', 'lbrc', 'rbrc', 'bsls',
+                          '@cap', 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'scln', 'apo', 'ret',
+                          'lsft', 'z', 'x', 'c', 'v', 'b', 'n', 'm', 'comm', 'dot', 'slsh', 'rsft',
+                          'lctl', 'lmet', 'lalt', 'spc', 'ralt', '@num', 'rctl'],
+                    numbers: ['_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_',
+                             '_', '_', '_', '_', '_', '_', '_', '7', '8', '9', '_', '_', '_', '_',
+                             '_', '_', '_', '_', '_', '_', '_', '4', '5', '6', '_', '_', '_',
+                             '_', '_', '_', '_', '_', '_', '_', '1', '2', '3', '_', '_',
+                             '_', '_', '_', '0', '_', '_', '_']
+                },
+                aliases: {
+                    cap: '(tap-hold 200 esc lctl)',
+                    num: '(layer-while-held numbers)'
+                }
+            };
+
+            state.config = sampleConfig;
+            state.ui.activeLayer = 'base';
+
+            renderLayers();
+            renderKeyboard();
+        }
+
+        function switchLayout(layout) {
+            state.ui.keyboardLayout = layout;
+            renderKeyboard();
+        }
+
+        // Initialize
+        renderKeyboard();
+    </script>
+</body>
+</html>
