@@ -40,7 +40,7 @@
         }
 
         header p {
-            opacity: 0.9;
+            opacity: 0;
             font-size: 1.1em;
         }
 
@@ -222,7 +222,7 @@
         .key.transparent {
             background: #f5f5f5;
             border-color: #bdbdbd;
-            opacity: 0.6;
+            opacity: 0;
         }
 
         .key-label {
@@ -236,6 +236,153 @@
             font-weight: 700;
             color: #000;
             word-break: break-all;
+        }
+
+        /* Layout editing mode styles */
+        .key.layout-edit-mode {
+            cursor: grab;
+            border: 2px dashed #667eea;
+            background: linear-gradient(135deg, #667eea20 0%, #764ba220 100%);
+        }
+
+        .key.layout-edit-mode:active {
+            cursor: grabbing;
+        }
+
+        .key.layout-edit-mode:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.4);
+        }
+
+        .key.dragging {
+            opacity: 0;
+            z-index: 1000;
+            cursor: grabbing !important;
+            transform: scale(1.05) rotate(3deg);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+            filter: brightness(1.2);
+        }
+
+        .insert-indicator {
+            position: absolute;
+            width: 4px;
+            background: linear-gradient(to bottom, #fbbf24, #f59e0b);
+            border-radius: 2px;
+            box-shadow: 0 0 10px rgba(251, 191, 36, 0.8);
+            z-index: 2000;
+            pointer-events: none;
+            animation: pulse-indicator 0.6s ease-in-out infinite alternate;
+        }
+
+        @keyframes pulse-indicator {
+            from {
+                transform: scaleX(0.8);
+                opacity: 0;
+            }
+            to {
+                transform: scaleX(1.2);
+                opacity: 0;
+            }
+        }
+
+        .key-controls {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            display: none;
+            gap: 2px;
+            z-index: 20;
+        }
+
+        .key.layout-edit-mode .key-controls {
+            display: flex;
+        }
+
+        .key-control-btn {
+            width: 14px;
+            height: 14px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 10px;
+            line-height: 1;
+            padding: 0;
+            background: #667eea;
+            color: white;
+            transition: background 0.2s;
+        }
+
+        .key-control-btn:hover {
+            background: #5568d3;
+        }
+
+        .key-control-btn.delete {
+            background: #dc3545;
+        }
+
+        .key-control-btn.delete:hover {
+            background: #c82333;
+        }
+
+        .key-order-badge {
+            position: absolute;
+            bottom: 2px;
+            left: 2px;
+            background: #48bb78;
+            color: white;
+            font-size: 10px;
+            font-weight: bold;
+            padding: 2px 4px;
+            border-radius: 3px;
+            z-index: 10;
+        }
+
+        .key-position-info {
+            position: absolute;
+            bottom: 2px;
+            left: 2px;
+            font-size: 8px;
+            color: #999;
+            display: none;
+        }
+
+        .key.layout-edit-mode .key-position-info {
+            display: block;
+        }
+
+        .add-key-btn {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: #28a745;
+            color: white;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+            transition: all 0.2s;
+            z-index: 100;
+        }
+
+        .add-key-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 16px rgba(40, 167, 69, 0.5);
+        }
+
+        .layout-edit-banner {
+            background: #667eea;
+            color: white;
+            padding: 10px 30px;
+            text-align: center;
+            font-weight: 600;
+            display: none;
+        }
+
+        .layout-edit-banner.active {
+            display: block;
         }
 
         .modal {
@@ -381,6 +528,7 @@
             padding: 40px;
             color: #6c757d;
         }
+
     </style>
 </head>
 <body>
@@ -396,7 +544,18 @@
             <button class="btn btn-success" onclick="downloadConfig()">Download Config</button>
             <button class="btn btn-secondary" onclick="createSampleConfig()">Load Sample</button>
             <button class="btn btn-warning" onclick="openAliasesModal()">Manage Aliases</button>
-            <button class="btn" onclick="openLayoutModal()">Edit Keyboard Layout</button>
+            <button class="btn" id="layoutEditBtn" onclick="toggleLayoutEditMode()">Edit Keyboard Layout</button>
+            <select id="layoutSelector" onchange="onLayoutSelectorChange()" style="padding: 8px 12px; border-radius: 6px; border: 1px solid #ddd; font-size: 14px; cursor: pointer;">
+                <option value="">-- Select Keyboard Layout --</option>
+                <option value="ansi-60">ANSI 60% (61 keys)</option>
+                <option value="ansi-tkl">ANSI TKL (87 keys)</option>
+                <option value="ansi-full">ANSI Full (104 keys)</option>
+                <option value="kinesis-freestyle">Kinesis Freestyle (Gaming)</option>
+            </select>
+        </div>
+
+        <div class="layout-edit-banner" id="layoutEditBanner">
+            Layout Edit Mode: Drag keys to reposition, click edit button to modify properties, or click + to add new keys. Only the base layer is editable.
         </div>
 
         <div class="keyboard-container">
@@ -488,47 +647,24 @@
         </div>
     </div>
 
-    <div id="layoutModal" class="modal">
-        <div class="modal-content" style="max-width: 600px;">
-            <div class="modal-header">Select Keyboard Layout</div>
-            <div class="info-box" style="margin: 0 0 20px 0;">
-                <h3>About Keyboard Layouts</h3>
-                <p>Select a preset keyboard layout that matches your physical keyboard. The layout defines which keys are available for remapping and how they're visually arranged.</p>
-            </div>
-            <div class="form-group">
-                <label>Keyboard Layout</label>
-                <select id="presetLayout">
-                    <option value="">-- Select your keyboard --</option>
-                    <option value="ansi-60">ANSI 60% (61 keys)</option>
-                    <option value="ansi-tkl">ANSI TKL (87 keys)</option>
-                    <option value="ansi-full">ANSI Full (104 keys)</option>
-                    <option value="iso-full">ISO Full (105 keys)</option>
-                    <option value="kinesis-freestyle">Kinesis Freestyle (Gaming)</option>
-                </select>
-            </div>
-            <div id="layoutPreview" style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 6px; min-height: 60px; color: #6c757d; text-align: center;">
-                Select a layout to see preview
-            </div>
-            <div class="modal-actions">
-                <button class="btn btn-secondary" onclick="closeLayoutModal()">Cancel</button>
-                <button class="btn" onclick="applySelectedLayout()">Apply Layout</button>
-            </div>
-        </div>
-    </div>
-
     <script>
         // ==================== STATE MANAGEMENT ====================
         const state = {
             config: {
-                defsrc: [],      // Array of key codes in order
-                layoutData: {},  // Object mapping key code to {x: 0, y: 0, w: 1, h: 1}
+                defsrc: [],      // Array of key codes in order (generated from grid)
+                grid: [],        // 2D array organizing keys by rows [[row1_keys], [row2_keys], ...]
+                layoutData: {},  // Object mapping key code to {x: 0, y: 0, w: 1, h: 1, gap?: true}
                 layers: {},
                 aliases: {}
             },
             ui: {
                 activeLayer: 'base',
                 editingKeyIndex: null,
-                editingAlias: null
+                editingAlias: null,
+                layoutEditMode: false,  // Toggle for layout editing mode
+                draggedKey: null,
+                draggedIndex: -1,
+                currentDropTarget: null
             }
         };
 
@@ -565,28 +701,407 @@
             return DEFAULT_KEY_DIMENSIONS[keyCode] || { w: 1, h: 1 };
         }
 
+        /**
+         * Convert grid structure to defsrc array
+         * @param {Array<Array<string>>} grid - 2D array of key codes
+         * @returns {Array<string>} - Flat array of key codes
+         */
+        function gridToDefsrc(grid) {
+            const defsrc = [];
+            for (const row of grid) {
+                for (const keyCode of row) {
+                    defsrc.push(keyCode);
+                }
+            }
+            return defsrc;
+        }
+
         //  ==================== PRECISE LAYOUT DEFINITIONS ====================
         // These layouts have exact key positions for proper keyboard visualization
         const PRECISE_LAYOUTS = {
             'ansi-60': {
                 defsrc: ['grv', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', 'bspc', 'tab', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\\', 'caps', 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\'', 'ret', 'lsft', 'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/', 'rsft', 'lctl', 'lmet', 'lalt', 'spc', 'ralt', 'rmet', 'menu', 'rctl'],
-                layoutData: {'grv': {x: 0, y: 0, w: 1, h: 1}, '1': {x: 1, y: 0, w: 1, h: 1}, '2': {x: 2, y: 0, w: 1, h: 1}, '3': {x: 3, y: 0, w: 1, h: 1}, '4': {x: 4, y: 0, w: 1, h: 1}, '5': {x: 5, y: 0, w: 1, h: 1}, '6': {x: 6, y: 0, w: 1, h: 1}, '7': {x: 7, y: 0, w: 1, h: 1}, '8': {x: 8, y: 0, w: 1, h: 1}, '9': {x: 9, y: 0, w: 1, h: 1}, '0': {x: 10, y: 0, w: 1, h: 1}, '-': {x: 11, y: 0, w: 1, h: 1}, '=': {x: 12, y: 0, w: 1, h: 1}, 'bspc': {x: 13, y: 0, w: 2, h: 1}, 'tab': {x: 0, y: 1, w: 1.5, h: 1}, 'q': {x: 1.5, y: 1, w: 1, h: 1}, 'w': {x: 2.5, y: 1, w: 1, h: 1}, 'e': {x: 3.5, y: 1, w: 1, h: 1}, 'r': {x: 4.5, y: 1, w: 1, h: 1}, 't': {x: 5.5, y: 1, w: 1, h: 1}, 'y': {x: 6.5, y: 1, w: 1, h: 1}, 'u': {x: 7.5, y: 1, w: 1, h: 1}, 'i': {x: 8.5, y: 1, w: 1, h: 1}, 'o': {x: 9.5, y: 1, w: 1, h: 1}, 'p': {x: 10.5, y: 1, w: 1, h: 1}, '[': {x: 11.5, y: 1, w: 1, h: 1}, ']': {x: 12.5, y: 1, w: 1, h: 1}, '\\': {x: 13.5, y: 1, w: 1.5, h: 1}, 'caps': {x: 0, y: 2, w: 1.75, h: 1}, 'a': {x: 1.75, y: 2, w: 1, h: 1}, 's': {x: 2.75, y: 2, w: 1, h: 1}, 'd': {x: 3.75, y: 2, w: 1, h: 1}, 'f': {x: 4.75, y: 2, w: 1, h: 1}, 'g': {x: 5.75, y: 2, w: 1, h: 1}, 'h': {x: 6.75, y: 2, w: 1, h: 1}, 'j': {x: 7.75, y: 2, w: 1, h: 1}, 'k': {x: 8.75, y: 2, w: 1, h: 1}, 'l': {x: 9.75, y: 2, w: 1, h: 1}, ';': {x: 10.75, y: 2, w: 1, h: 1}, '\'': {x: 11.75, y: 2, w: 1, h: 1}, 'ret': {x: 12.75, y: 2, w: 2.25, h: 1}, 'lsft': {x: 0, y: 3, w: 2.25, h: 1}, 'z': {x: 2.25, y: 3, w: 1, h: 1}, 'x': {x: 3.25, y: 3, w: 1, h: 1}, 'c': {x: 4.25, y: 3, w: 1, h: 1}, 'v': {x: 5.25, y: 3, w: 1, h: 1}, 'b': {x: 6.25, y: 3, w: 1, h: 1}, 'n': {x: 7.25, y: 3, w: 1, h: 1}, 'm': {x: 8.25, y: 3, w: 1, h: 1}, ',': {x: 9.25, y: 3, w: 1, h: 1}, '.': {x: 10.25, y: 3, w: 1, h: 1}, '/': {x: 11.25, y: 3, w: 1, h: 1}, 'rsft': {x: 12.25, y: 3, w: 2.75, h: 1}, 'lctl': {x: 0, y: 4, w: 1.25, h: 1}, 'lmet': {x: 1.25, y: 4, w: 1.25, h: 1}, 'lalt': {x: 2.5, y: 4, w: 1.25, h: 1}, 'spc': {x: 3.75, y: 4, w: 6.25, h: 1}, 'ralt': {x: 10, y: 4, w: 1.25, h: 1}, 'rmet': {x: 11.25, y: 4, w: 1.25, h: 1}, 'menu': {x: 12.5, y: 4, w: 1.25, h: 1}, 'rctl': {x: 13.75, y: 4, w: 1.25, h: 1}}
+                grid: [
+                    ['grv', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', 'bspc'],
+                    ['tab', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\\'],
+                    ['caps', 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\'', 'ret'],
+                    ['lsft', 'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/', 'rsft'],
+                    ['lctl', 'lmet', 'lalt', 'spc', 'ralt', 'rmet', 'menu', 'rctl']
+                ],
+                layoutData: {
+                    'grv': {x: 0, y: 0, w: 1, h: 1},
+                    '1': {x: 0, y: 0, w: 1, h: 1},
+                    '2': {x: 0, y: 0, w: 1, h: 1},
+                    '3': {x: 0, y: 0, w: 1, h: 1},
+                    '4': {x: 0, y: 0, w: 1, h: 1},
+                    '5': {x: 0, y: 0, w: 1, h: 1},
+                    '6': {x: 0, y: 0, w: 1, h: 1},
+                    '7': {x: 0, y: 0, w: 1, h: 1},
+                    '8': {x: 0, y: 0, w: 1, h: 1},
+                    '9': {x: 0, y: 0, w: 1, h: 1},
+                    '0': {x: 0, y: 0, w: 1, h: 1},
+                    '-': {x: 0, y: 0, w: 1, h: 1},
+                    '=': {x: 0, y: 0, w: 1, h: 1},
+                    'bspc': {x: 0, y: 0, w: 2, h: 1},
+                    'tab': {x: 0, y: 0, w: 1.5, h: 1},
+                    'q': {x: 0, y: 0, w: 1, h: 1},
+                    'w': {x: 0, y: 0, w: 1, h: 1},
+                    'e': {x: 0, y: 0, w: 1, h: 1},
+                    'r': {x: 0, y: 0, w: 1, h: 1},
+                    't': {x: 0, y: 0, w: 1, h: 1},
+                    'y': {x: 0, y: 0, w: 1, h: 1},
+                    'u': {x: 0, y: 0, w: 1, h: 1},
+                    'i': {x: 0, y: 0, w: 1, h: 1},
+                    'o': {x: 0, y: 0, w: 1, h: 1},
+                    'p': {x: 0, y: 0, w: 1, h: 1},
+                    '[': {x: 0, y: 0, w: 1, h: 1},
+                    ']': {x: 0, y: 0, w: 1, h: 1},
+                    '\\': {x: 0, y: 0, w: 1.5, h: 1},
+                    'caps': {x: 0, y: 0, w: 1.75, h: 1},
+                    'a': {x: 0, y: 0, w: 1, h: 1},
+                    's': {x: 0, y: 0, w: 1, h: 1},
+                    'd': {x: 0, y: 0, w: 1, h: 1},
+                    'f': {x: 0, y: 0, w: 1, h: 1},
+                    'g': {x: 0, y: 0, w: 1, h: 1},
+                    'h': {x: 0, y: 0, w: 1, h: 1},
+                    'j': {x: 0, y: 0, w: 1, h: 1},
+                    'k': {x: 0, y: 0, w: 1, h: 1},
+                    'l': {x: 0, y: 0, w: 1, h: 1},
+                    ';': {x: 0, y: 0, w: 1, h: 1},
+                    'ret': {x: 0, y: 0, w: 2.25, h: 1},
+                    'lsft': {x: 0, y: 0, w: 2.25, h: 1},
+                    'z': {x: 0, y: 0, w: 1, h: 1},
+                    'x': {x: 0, y: 0, w: 1, h: 1},
+                    'c': {x: 0, y: 0, w: 1, h: 1},
+                    'v': {x: 0, y: 0, w: 1, h: 1},
+                    'b': {x: 0, y: 0, w: 1, h: 1},
+                    'n': {x: 0, y: 0, w: 1, h: 1},
+                    'm': {x: 0, y: 0, w: 1, h: 1},
+                    ',': {x: 0, y: 0, w: 1, h: 1},
+                    '.': {x: 0, y: 0, w: 1, h: 1},
+                    '/': {x: 0, y: 0, w: 1, h: 1},
+                    'rsft': {x: 0, y: 0, w: 2.75, h: 1},
+                    'lctl': {x: 0, y: 0, w: 1.25, h: 1},
+                    'lmet': {x: 0, y: 0, w: 1.25, h: 1},
+                    'lalt': {x: 0, y: 0, w: 1.25, h: 1},
+                    'spc': {x: 0, y: 0, w: 6.25, h: 1},
+                    'ralt': {x: 0, y: 0, w: 1.25, h: 1},
+                    'rmet': {x: 0, y: 0, w: 1.25, h: 1},
+                    'menu': {x: 0, y: 0, w: 1.25, h: 1},
+                    'rctl': {x: 0, y: 0, w: 1.25, h: 1}
+                }
             },
             'ansi-tkl': {
                 defsrc: ['esc', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12', 'prnt', 'slck', 'paus', 'grv', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', 'bspc', 'ins', 'home', 'pgup', 'tab', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\\', 'del', 'end', 'pgdn', 'caps', 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\'', 'ret', 'lsft', 'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/', 'rsft', 'up', 'lctl', 'lmet', 'lalt', 'spc', 'ralt', 'rmet', 'menu', 'rctl', 'left', 'down', 'rght'],
-                layoutData: {'esc': {x: 0, y: 0, w: 1, h: 1}, 'f1': {x: 2, y: 0, w: 1, h: 1}, 'f2': {x: 3, y: 0, w: 1, h: 1}, 'f3': {x: 4, y: 0, w: 1, h: 1}, 'f4': {x: 5, y: 0, w: 1, h: 1}, 'f5': {x: 6.5, y: 0, w: 1, h: 1}, 'f6': {x: 7.5, y: 0, w: 1, h: 1}, 'f7': {x: 8.5, y: 0, w: 1, h: 1}, 'f8': {x: 9.5, y: 0, w: 1, h: 1}, 'f9': {x: 11, y: 0, w: 1, h: 1}, 'f10': {x: 12, y: 0, w: 1, h: 1}, 'f11': {x: 13, y: 0, w: 1, h: 1}, 'f12': {x: 14, y: 0, w: 1, h: 1}, 'prnt': {x: 15.25, y: 0, w: 1, h: 1}, 'slck': {x: 16.25, y: 0, w: 1, h: 1}, 'paus': {x: 17.25, y: 0, w: 1, h: 1}, 'grv': {x: 0, y: 1.5, w: 1, h: 1}, '1': {x: 1, y: 1.5, w: 1, h: 1}, '2': {x: 2, y: 1.5, w: 1, h: 1}, '3': {x: 3, y: 1.5, w: 1, h: 1}, '4': {x: 4, y: 1.5, w: 1, h: 1}, '5': {x: 5, y: 1.5, w: 1, h: 1}, '6': {x: 6, y: 1.5, w: 1, h: 1}, '7': {x: 7, y: 1.5, w: 1, h: 1}, '8': {x: 8, y: 1.5, w: 1, h: 1}, '9': {x: 9, y: 1.5, w: 1, h: 1}, '0': {x: 10, y: 1.5, w: 1, h: 1}, '-': {x: 11, y: 1.5, w: 1, h: 1}, '=': {x: 12, y: 1.5, w: 1, h: 1}, 'bspc': {x: 13, y: 1.5, w: 2, h: 1}, 'ins': {x: 15.25, y: 1.5, w: 1, h: 1}, 'home': {x: 16.25, y: 1.5, w: 1, h: 1}, 'pgup': {x: 17.25, y: 1.5, w: 1, h: 1}, 'tab': {x: 0, y: 2.5, w: 1.5, h: 1}, 'q': {x: 1.5, y: 2.5, w: 1, h: 1}, 'w': {x: 2.5, y: 2.5, w: 1, h: 1}, 'e': {x: 3.5, y: 2.5, w: 1, h: 1}, 'r': {x: 4.5, y: 2.5, w: 1, h: 1}, 't': {x: 5.5, y: 2.5, w: 1, h: 1}, 'y': {x: 6.5, y: 2.5, w: 1, h: 1}, 'u': {x: 7.5, y: 2.5, w: 1, h: 1}, 'i': {x: 8.5, y: 2.5, w: 1, h: 1}, 'o': {x: 9.5, y: 2.5, w: 1, h: 1}, 'p': {x: 10.5, y: 2.5, w: 1, h: 1}, '[': {x: 11.5, y: 2.5, w: 1, h: 1}, ']': {x: 12.5, y: 2.5, w: 1, h: 1}, '\\': {x: 13.5, y: 2.5, w: 1.5, h: 1}, 'del': {x: 15.25, y: 2.5, w: 1, h: 1}, 'end': {x: 16.25, y: 2.5, w: 1, h: 1}, 'pgdn': {x: 17.25, y: 2.5, w: 1, h: 1}, 'caps': {x: 0, y: 3.5, w: 1.75, h: 1}, 'a': {x: 1.75, y: 3.5, w: 1, h: 1}, 's': {x: 2.75, y: 3.5, w: 1, h: 1}, 'd': {x: 3.75, y: 3.5, w: 1, h: 1}, 'f': {x: 4.75, y: 3.5, w: 1, h: 1}, 'g': {x: 5.75, y: 3.5, w: 1, h: 1}, 'h': {x: 6.75, y: 3.5, w: 1, h: 1}, 'j': {x: 7.75, y: 3.5, w: 1, h: 1}, 'k': {x: 8.75, y: 3.5, w: 1, h: 1}, 'l': {x: 9.75, y: 3.5, w: 1, h: 1}, ';': {x: 10.75, y: 3.5, w: 1, h: 1}, '\'': {x: 11.75, y: 3.5, w: 1, h: 1}, 'ret': {x: 12.75, y: 3.5, w: 2.25, h: 1}, 'lsft': {x: 0, y: 4.5, w: 2.25, h: 1}, 'z': {x: 2.25, y: 4.5, w: 1, h: 1}, 'x': {x: 3.25, y: 4.5, w: 1, h: 1}, 'c': {x: 4.25, y: 4.5, w: 1, h: 1}, 'v': {x: 5.25, y: 4.5, w: 1, h: 1}, 'b': {x: 6.25, y: 4.5, w: 1, h: 1}, 'n': {x: 7.25, y: 4.5, w: 1, h: 1}, 'm': {x: 8.25, y: 4.5, w: 1, h: 1}, ',': {x: 9.25, y: 4.5, w: 1, h: 1}, '.': {x: 10.25, y: 4.5, w: 1, h: 1}, '/': {x: 11.25, y: 4.5, w: 1, h: 1}, 'rsft': {x: 12.25, y: 4.5, w: 2.75, h: 1}, 'up': {x: 16.25, y: 4.5, w: 1, h: 1}, 'lctl': {x: 0, y: 5.5, w: 1.25, h: 1}, 'lmet': {x: 1.25, y: 5.5, w: 1.25, h: 1}, 'lalt': {x: 2.5, y: 5.5, w: 1.25, h: 1}, 'spc': {x: 3.75, y: 5.5, w: 6.25, h: 1}, 'ralt': {x: 10, y: 5.5, w: 1.25, h: 1}, 'rmet': {x: 11.25, y: 5.5, w: 1.25, h: 1}, 'menu': {x: 12.5, y: 5.5, w: 1.25, h: 1}, 'rctl': {x: 13.75, y: 5.5, w: 1.25, h: 1}, 'left': {x: 15.25, y: 5.5, w: 1, h: 1}, 'down': {x: 16.25, y: 5.5, w: 1, h: 1}, 'rght': {x: 17.25, y: 5.5, w: 1, h: 1}}
+                grid: [
+                    ['esc', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12', 'prnt', 'slck', 'paus'],
+                    ['grv', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', 'bspc', 'ins', 'home', 'pgup'],
+                    ['tab', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\\', 'del', 'end', 'pgdn'],
+                    ['caps', 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\'', 'ret'],
+                    ['lsft', 'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/', 'rsft', 'up'],
+                    ['lctl', 'lmet', 'lalt', 'spc', 'ralt', 'rmet', 'menu', 'rctl', 'left', 'down', 'rght']
+                ],
+                layoutData: {
+                    'esc': {x: 0, y: 0, w: 1, h: 1},
+                    'f1': {x: 1, y: 0, w: 1, h: 1},
+                    'f2': {x: 0, y: 0, w: 1, h: 1},
+                    'f3': {x: 0, y: 0, w: 1, h: 1},
+                    'f4': {x: 0, y: 0, w: 1, h: 1},
+                    'f5': {x: 0.5, y: 0, w: 1, h: 1},
+                    'f6': {x: 0, y: 0, w: 1, h: 1},
+                    'f7': {x: 0, y: 0, w: 1, h: 1},
+                    'f8': {x: 0, y: 0, w: 1, h: 1},
+                    'f9': {x: 0.5, y: 0, w: 1, h: 1},
+                    'f10': {x: 0, y: 0, w: 1, h: 1},
+                    'f11': {x: 0, y: 0, w: 1, h: 1},
+                    'f12': {x: 0, y: 0, w: 1, h: 1},
+                    'prnt': {x: 0.25, y: 0, w: 1, h: 1},
+                    'slck': {x: 0, y: 0, w: 1, h: 1},
+                    'paus': {x: 0, y: 0, w: 1, h: 1},
+                    'grv': {x: 0, y: 0, w: 1, h: 1},
+                    '1': {x: 0, y: 0, w: 1, h: 1},
+                    '2': {x: 0, y: 0, w: 1, h: 1},
+                    '3': {x: 0, y: 0, w: 1, h: 1},
+                    '4': {x: 0, y: 0, w: 1, h: 1},
+                    '5': {x: 0, y: 0, w: 1, h: 1},
+                    '6': {x: 0, y: 0, w: 1, h: 1},
+                    '7': {x: 0, y: 0, w: 1, h: 1},
+                    '8': {x: 0, y: 0, w: 1, h: 1},
+                    '9': {x: 0, y: 0, w: 1, h: 1},
+                    '0': {x: 0, y: 0, w: 1, h: 1},
+                    '-': {x: 0, y: 0, w: 1, h: 1},
+                    '=': {x: 0, y: 0, w: 1, h: 1},
+                    'bspc': {x: 0, y: 0, w: 2, h: 1},
+                    'ins': {x: 0.25, y: 0, w: 1, h: 1},
+                    'home': {x: 0, y: 0, w: 1, h: 1},
+                    'pgup': {x: 0, y: 0, w: 1, h: 1},
+                    'tab': {x: 0, y: 0, w: 1.5, h: 1},
+                    'q': {x: 0, y: 0, w: 1, h: 1},
+                    'w': {x: 0, y: 0, w: 1, h: 1},
+                    'e': {x: 0, y: 0, w: 1, h: 1},
+                    'r': {x: 0, y: 0, w: 1, h: 1},
+                    't': {x: 0, y: 0, w: 1, h: 1},
+                    'y': {x: 0, y: 0, w: 1, h: 1},
+                    'u': {x: 0, y: 0, w: 1, h: 1},
+                    'i': {x: 0, y: 0, w: 1, h: 1},
+                    'o': {x: 0, y: 0, w: 1, h: 1},
+                    'p': {x: 0, y: 0, w: 1, h: 1},
+                    '[': {x: 0, y: 0, w: 1, h: 1},
+                    ']': {x: 0, y: 0, w: 1, h: 1},
+                    '\\': {x: 0, y: 0, w: 1.5, h: 1},
+                    'del': {x: 0.25, y: 0, w: 1, h: 1},
+                    'end': {x: 0, y: 0, w: 1, h: 1},
+                    'pgdn': {x: 0, y: 0, w: 1, h: 1},
+                    'caps': {x: 0, y: 0, w: 1.75, h: 1},
+                    'a': {x: 0, y: 0, w: 1, h: 1},
+                    's': {x: 0, y: 0, w: 1, h: 1},
+                    'd': {x: 0, y: 0, w: 1, h: 1},
+                    'f': {x: 0, y: 0, w: 1, h: 1},
+                    'g': {x: 0, y: 0, w: 1, h: 1},
+                    'h': {x: 0, y: 0, w: 1, h: 1},
+                    'j': {x: 0, y: 0, w: 1, h: 1},
+                    'k': {x: 0, y: 0, w: 1, h: 1},
+                    'l': {x: 0, y: 0, w: 1, h: 1},
+                    ';': {x: 0, y: 0, w: 1, h: 1},
+                    'ret': {x: 0, y: 0, w: 2.25, h: 1},
+                    'lsft': {x: 0, y: 0, w: 2.25, h: 1},
+                    'z': {x: 0, y: 0, w: 1, h: 1},
+                    'x': {x: 0, y: 0, w: 1, h: 1},
+                    'c': {x: 0, y: 0, w: 1, h: 1},
+                    'v': {x: 0, y: 0, w: 1, h: 1},
+                    'b': {x: 0, y: 0, w: 1, h: 1},
+                    'n': {x: 0, y: 0, w: 1, h: 1},
+                    'm': {x: 0, y: 0, w: 1, h: 1},
+                    ',': {x: 0, y: 0, w: 1, h: 1},
+                    '.': {x: 0, y: 0, w: 1, h: 1},
+                    '/': {x: 0, y: 0, w: 1, h: 1},
+                    'rsft': {x: 0, y: 0, w: 2.75, h: 1},
+                    'up': {x: 1.25, y: 0, w: 1, h: 1},
+                    'lctl': {x: 0, y: 0, w: 1.25, h: 1},
+                    'lmet': {x: 0, y: 0, w: 1.25, h: 1},
+                    'lalt': {x: 0, y: 0, w: 1.25, h: 1},
+                    'spc': {x: 0, y: 0, w: 6.25, h: 1},
+                    'ralt': {x: 0, y: 0, w: 1.25, h: 1},
+                    'rmet': {x: 0, y: 0, w: 1.25, h: 1},
+                    'menu': {x: 0, y: 0, w: 1.25, h: 1},
+                    'rctl': {x: 0, y: 0, w: 1.25, h: 1},
+                    'left': {x: 0.25, y: 0, w: 1, h: 1},
+                    'down': {x: 0, y: 0, w: 1, h: 1},
+                    'rght': {x: 0, y: 0, w: 1, h: 1}
+                }
             },
             'ansi-full': {
                 defsrc: ['esc', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12', 'prnt', 'slck', 'paus', 'grv', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', 'bspc', 'ins', 'home', 'pgup', 'nlck', 'kp/', 'kp*', 'kp-', 'tab', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\\', 'del', 'end', 'pgdn', 'kp7', 'kp8', 'kp9', 'kp+', 'caps', 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\'', 'ret', 'kp4', 'kp5', 'kp6', 'lsft', 'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/', 'rsft', 'up', 'kp1', 'kp2', 'kp3', 'kprt', 'lctl', 'lmet', 'lalt', 'spc', 'ralt', 'rmet', 'menu', 'rctl', 'left', 'down', 'rght', 'kp0', 'kp.'],
-                layoutData: {'esc': {x: 0, y: 0, w: 1, h: 1}, 'f1': {x: 2, y: 0, w: 1, h: 1}, 'f2': {x: 3, y: 0, w: 1, h: 1}, 'f3': {x: 4, y: 0, w: 1, h: 1}, 'f4': {x: 5, y: 0, w: 1, h: 1}, 'f5': {x: 6.5, y: 0, w: 1, h: 1}, 'f6': {x: 7.5, y: 0, w: 1, h: 1}, 'f7': {x: 8.5, y: 0, w: 1, h: 1}, 'f8': {x: 9.5, y: 0, w: 1, h: 1}, 'f9': {x: 11, y: 0, w: 1, h: 1}, 'f10': {x: 12, y: 0, w: 1, h: 1}, 'f11': {x: 13, y: 0, w: 1, h: 1}, 'f12': {x: 14, y: 0, w: 1, h: 1}, 'prnt': {x: 15.25, y: 0, w: 1, h: 1}, 'slck': {x: 16.25, y: 0, w: 1, h: 1}, 'paus': {x: 17.25, y: 0, w: 1, h: 1}, 'grv': {x: 0, y: 1.5, w: 1, h: 1}, '1': {x: 1, y: 1.5, w: 1, h: 1}, '2': {x: 2, y: 1.5, w: 1, h: 1}, '3': {x: 3, y: 1.5, w: 1, h: 1}, '4': {x: 4, y: 1.5, w: 1, h: 1}, '5': {x: 5, y: 1.5, w: 1, h: 1}, '6': {x: 6, y: 1.5, w: 1, h: 1}, '7': {x: 7, y: 1.5, w: 1, h: 1}, '8': {x: 8, y: 1.5, w: 1, h: 1}, '9': {x: 9, y: 1.5, w: 1, h: 1}, '0': {x: 10, y: 1.5, w: 1, h: 1}, '-': {x: 11, y: 1.5, w: 1, h: 1}, '=': {x: 12, y: 1.5, w: 1, h: 1}, 'bspc': {x: 13, y: 1.5, w: 2, h: 1}, 'ins': {x: 15.25, y: 1.5, w: 1, h: 1}, 'home': {x: 16.25, y: 1.5, w: 1, h: 1}, 'pgup': {x: 17.25, y: 1.5, w: 1, h: 1}, 'nlck': {x: 18.5, y: 1.5, w: 1, h: 1}, 'kp/': {x: 19.5, y: 1.5, w: 1, h: 1}, 'kp*': {x: 20.5, y: 1.5, w: 1, h: 1}, 'kp-': {x: 21.5, y: 1.5, w: 1, h: 1}, 'tab': {x: 0, y: 2.5, w: 1.5, h: 1}, 'q': {x: 1.5, y: 2.5, w: 1, h: 1}, 'w': {x: 2.5, y: 2.5, w: 1, h: 1}, 'e': {x: 3.5, y: 2.5, w: 1, h: 1}, 'r': {x: 4.5, y: 2.5, w: 1, h: 1}, 't': {x: 5.5, y: 2.5, w: 1, h: 1}, 'y': {x: 6.5, y: 2.5, w: 1, h: 1}, 'u': {x: 7.5, y: 2.5, w: 1, h: 1}, 'i': {x: 8.5, y: 2.5, w: 1, h: 1}, 'o': {x: 9.5, y: 2.5, w: 1, h: 1}, 'p': {x: 10.5, y: 2.5, w: 1, h: 1}, '[': {x: 11.5, y: 2.5, w: 1, h: 1}, ']': {x: 12.5, y: 2.5, w: 1, h: 1}, '\\': {x: 13.5, y: 2.5, w: 1.5, h: 1}, 'del': {x: 15.25, y: 2.5, w: 1, h: 1}, 'end': {x: 16.25, y: 2.5, w: 1, h: 1}, 'pgdn': {x: 17.25, y: 2.5, w: 1, h: 1}, 'kp7': {x: 18.5, y: 2.5, w: 1, h: 1}, 'kp8': {x: 19.5, y: 2.5, w: 1, h: 1}, 'kp9': {x: 20.5, y: 2.5, w: 1, h: 1}, 'kp+': {x: 21.5, y: 2.5, w: 1, h: 2}, 'caps': {x: 0, y: 3.5, w: 1.75, h: 1}, 'a': {x: 1.75, y: 3.5, w: 1, h: 1}, 's': {x: 2.75, y: 3.5, w: 1, h: 1}, 'd': {x: 3.75, y: 3.5, w: 1, h: 1}, 'f': {x: 4.75, y: 3.5, w: 1, h: 1}, 'g': {x: 5.75, y: 3.5, w: 1, h: 1}, 'h': {x: 6.75, y: 3.5, w: 1, h: 1}, 'j': {x: 7.75, y: 3.5, w: 1, h: 1}, 'k': {x: 8.75, y: 3.5, w: 1, h: 1}, 'l': {x: 9.75, y: 3.5, w: 1, h: 1}, ';': {x: 10.75, y: 3.5, w: 1, h: 1}, '\'': {x: 11.75, y: 3.5, w: 1, h: 1}, 'ret': {x: 12.75, y: 3.5, w: 2.25, h: 1}, 'kp4': {x: 18.5, y: 3.5, w: 1, h: 1}, 'kp5': {x: 19.5, y: 3.5, w: 1, h: 1}, 'kp6': {x: 20.5, y: 3.5, w: 1, h: 1}, 'lsft': {x: 0, y: 4.5, w: 2.25, h: 1}, 'z': {x: 2.25, y: 4.5, w: 1, h: 1}, 'x': {x: 3.25, y: 4.5, w: 1, h: 1}, 'c': {x: 4.25, y: 4.5, w: 1, h: 1}, 'v': {x: 5.25, y: 4.5, w: 1, h: 1}, 'b': {x: 6.25, y: 4.5, w: 1, h: 1}, 'n': {x: 7.25, y: 4.5, w: 1, h: 1}, 'm': {x: 8.25, y: 4.5, w: 1, h: 1}, ',': {x: 9.25, y: 4.5, w: 1, h: 1}, '.': {x: 10.25, y: 4.5, w: 1, h: 1}, '/': {x: 11.25, y: 4.5, w: 1, h: 1}, 'rsft': {x: 12.25, y: 4.5, w: 2.75, h: 1}, 'up': {x: 16.25, y: 4.5, w: 1, h: 1}, 'kp1': {x: 18.5, y: 4.5, w: 1, h: 1}, 'kp2': {x: 19.5, y: 4.5, w: 1, h: 1}, 'kp3': {x: 20.5, y: 4.5, w: 1, h: 1}, 'kprt': {x: 21.5, y: 4.5, w: 1, h: 2}, 'lctl': {x: 0, y: 5.5, w: 1.25, h: 1}, 'lmet': {x: 1.25, y: 5.5, w: 1.25, h: 1}, 'lalt': {x: 2.5, y: 5.5, w: 1.25, h: 1}, 'spc': {x: 3.75, y: 5.5, w: 6.25, h: 1}, 'ralt': {x: 10, y: 5.5, w: 1.25, h: 1}, 'rmet': {x: 11.25, y: 5.5, w: 1.25, h: 1}, 'menu': {x: 12.5, y: 5.5, w: 1.25, h: 1}, 'rctl': {x: 13.75, y: 5.5, w: 1.25, h: 1}, 'left': {x: 15.25, y: 5.5, w: 1, h: 1}, 'down': {x: 16.25, y: 5.5, w: 1, h: 1}, 'rght': {x: 17.25, y: 5.5, w: 1, h: 1}, 'kp0': {x: 18.5, y: 5.5, w: 2, h: 1}, 'kp.': {x: 20.5, y: 5.5, w: 1, h: 1}}
-            },
-            'iso-full': {
-                defsrc: ['esc', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12', 'prnt', 'slck', 'paus', 'grv', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', 'bspc', 'ins', 'home', 'pgup', 'nlck', 'kp/', 'kp*', 'kp-', 'tab', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']', 'del', 'end', 'pgdn', 'kp7', 'kp8', 'kp9', 'kp+', 'caps', 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\'', 'nuhs', 'ret', 'kp4', 'kp5', 'kp6', 'lsft', 'nubs', 'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/', 'rsft', 'up', 'kp1', 'kp2', 'kp3', 'kprt', 'lctl', 'lmet', 'lalt', 'spc', 'ralt', 'rmet', 'menu', 'rctl', 'left', 'down', 'rght', 'kp0', 'kp.'],
-                layoutData: {'esc': {x: 0, y: 0, w: 1, h: 1}, 'f1': {x: 2, y: 0, w: 1, h: 1}, 'f2': {x: 3, y: 0, w: 1, h: 1}, 'f3': {x: 4, y: 0, w: 1, h: 1}, 'f4': {x: 5, y: 0, w: 1, h: 1}, 'f5': {x: 6.5, y: 0, w: 1, h: 1}, 'f6': {x: 7.5, y: 0, w: 1, h: 1}, 'f7': {x: 8.5, y: 0, w: 1, h: 1}, 'f8': {x: 9.5, y: 0, w: 1, h: 1}, 'f9': {x: 11, y: 0, w: 1, h: 1}, 'f10': {x: 12, y: 0, w: 1, h: 1}, 'f11': {x: 13, y: 0, w: 1, h: 1}, 'f12': {x: 14, y: 0, w: 1, h: 1}, 'prnt': {x: 15.25, y: 0, w: 1, h: 1}, 'slck': {x: 16.25, y: 0, w: 1, h: 1}, 'paus': {x: 17.25, y: 0, w: 1, h: 1}, 'grv': {x: 0, y: 1.5, w: 1, h: 1}, '1': {x: 1, y: 1.5, w: 1, h: 1}, '2': {x: 2, y: 1.5, w: 1, h: 1}, '3': {x: 3, y: 1.5, w: 1, h: 1}, '4': {x: 4, y: 1.5, w: 1, h: 1}, '5': {x: 5, y: 1.5, w: 1, h: 1}, '6': {x: 6, y: 1.5, w: 1, h: 1}, '7': {x: 7, y: 1.5, w: 1, h: 1}, '8': {x: 8, y: 1.5, w: 1, h: 1}, '9': {x: 9, y: 1.5, w: 1, h: 1}, '0': {x: 10, y: 1.5, w: 1, h: 1}, '-': {x: 11, y: 1.5, w: 1, h: 1}, '=': {x: 12, y: 1.5, w: 1, h: 1}, 'bspc': {x: 13, y: 1.5, w: 2, h: 1}, 'ins': {x: 15.25, y: 1.5, w: 1, h: 1}, 'home': {x: 16.25, y: 1.5, w: 1, h: 1}, 'pgup': {x: 17.25, y: 1.5, w: 1, h: 1}, 'nlck': {x: 18.5, y: 1.5, w: 1, h: 1}, 'kp/': {x: 19.5, y: 1.5, w: 1, h: 1}, 'kp*': {x: 20.5, y: 1.5, w: 1, h: 1}, 'kp-': {x: 21.5, y: 1.5, w: 1, h: 1}, 'tab': {x: 0, y: 2.5, w: 1.5, h: 1}, 'q': {x: 1.5, y: 2.5, w: 1, h: 1}, 'w': {x: 2.5, y: 2.5, w: 1, h: 1}, 'e': {x: 3.5, y: 2.5, w: 1, h: 1}, 'r': {x: 4.5, y: 2.5, w: 1, h: 1}, 't': {x: 5.5, y: 2.5, w: 1, h: 1}, 'y': {x: 6.5, y: 2.5, w: 1, h: 1}, 'u': {x: 7.5, y: 2.5, w: 1, h: 1}, 'i': {x: 8.5, y: 2.5, w: 1, h: 1}, 'o': {x: 9.5, y: 2.5, w: 1, h: 1}, 'p': {x: 10.5, y: 2.5, w: 1, h: 1}, '[': {x: 11.5, y: 2.5, w: 1, h: 1}, ']': {x: 12.5, y: 2.5, w: 1, h: 1}, 'del': {x: 15.25, y: 2.5, w: 1, h: 1}, 'end': {x: 16.25, y: 2.5, w: 1, h: 1}, 'pgdn': {x: 17.25, y: 2.5, w: 1, h: 1}, 'kp7': {x: 18.5, y: 2.5, w: 1, h: 1}, 'kp8': {x: 19.5, y: 2.5, w: 1, h: 1}, 'kp9': {x: 20.5, y: 2.5, w: 1, h: 1}, 'kp+': {x: 21.5, y: 2.5, w: 1, h: 2}, 'caps': {x: 0, y: 3.5, w: 1.75, h: 1}, 'a': {x: 1.75, y: 3.5, w: 1, h: 1}, 's': {x: 2.75, y: 3.5, w: 1, h: 1}, 'd': {x: 3.75, y: 3.5, w: 1, h: 1}, 'f': {x: 4.75, y: 3.5, w: 1, h: 1}, 'g': {x: 5.75, y: 3.5, w: 1, h: 1}, 'h': {x: 6.75, y: 3.5, w: 1, h: 1}, 'j': {x: 7.75, y: 3.5, w: 1, h: 1}, 'k': {x: 8.75, y: 3.5, w: 1, h: 1}, 'l': {x: 9.75, y: 3.5, w: 1, h: 1}, ';': {x: 10.75, y: 3.5, w: 1, h: 1}, '\'': {x: 11.75, y: 3.5, w: 1, h: 1}, 'nuhs': {x: 12.75, y: 3.5, w: 1, h: 1}, 'ret': {x: 13.75, y: 2.5, w: 1.25, h: 2}, 'kp4': {x: 18.5, y: 3.5, w: 1, h: 1}, 'kp5': {x: 19.5, y: 3.5, w: 1, h: 1}, 'kp6': {x: 20.5, y: 3.5, w: 1, h: 1}, 'lsft': {x: 0, y: 4.5, w: 1.25, h: 1}, 'nubs': {x: 1.25, y: 4.5, w: 1, h: 1}, 'z': {x: 2.25, y: 4.5, w: 1, h: 1}, 'x': {x: 3.25, y: 4.5, w: 1, h: 1}, 'c': {x: 4.25, y: 4.5, w: 1, h: 1}, 'v': {x: 5.25, y: 4.5, w: 1, h: 1}, 'b': {x: 6.25, y: 4.5, w: 1, h: 1}, 'n': {x: 7.25, y: 4.5, w: 1, h: 1}, 'm': {x: 8.25, y: 4.5, w: 1, h: 1}, ',': {x: 9.25, y: 4.5, w: 1, h: 1}, '.': {x: 10.25, y: 4.5, w: 1, h: 1}, '/': {x: 11.25, y: 4.5, w: 1, h: 1}, 'rsft': {x: 12.25, y: 4.5, w: 2.75, h: 1}, 'up': {x: 16.25, y: 4.5, w: 1, h: 1}, 'kp1': {x: 18.5, y: 4.5, w: 1, h: 1}, 'kp2': {x: 19.5, y: 4.5, w: 1, h: 1}, 'kp3': {x: 20.5, y: 4.5, w: 1, h: 1}, 'kprt': {x: 21.5, y: 4.5, w: 1, h: 2}, 'lctl': {x: 0, y: 5.5, w: 1.25, h: 1}, 'lmet': {x: 1.25, y: 5.5, w: 1.25, h: 1}, 'lalt': {x: 2.5, y: 5.5, w: 1.25, h: 1}, 'spc': {x: 3.75, y: 5.5, w: 6.25, h: 1}, 'ralt': {x: 10, y: 5.5, w: 1.25, h: 1}, 'rmet': {x: 11.25, y: 5.5, w: 1.25, h: 1}, 'menu': {x: 12.5, y: 5.5, w: 1.25, h: 1}, 'rctl': {x: 13.75, y: 5.5, w: 1.25, h: 1}, 'left': {x: 15.25, y: 5.5, w: 1, h: 1}, 'down': {x: 16.25, y: 5.5, w: 1, h: 1}, 'rght': {x: 17.25, y: 5.5, w: 1, h: 1}, 'kp0': {x: 18.5, y: 5.5, w: 2, h: 1}, 'kp.': {x: 20.5, y: 5.5, w: 1, h: 1}}
+                grid: [
+                    ['esc', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12', 'prnt', 'slck', 'paus'],
+                    ['grv', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', 'bspc', 'ins', 'home', 'pgup', 'nlck', 'kp/', 'kp*', 'kp-'],
+                    ['tab', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\\', 'del', 'end', 'pgdn', 'kp7', 'kp8', 'kp9', 'kp+'],
+                    ['caps', 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\'', 'ret', 'kp4', 'kp5', 'kp6'],
+                    ['lsft', 'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/', 'rsft', 'up', 'kp1', 'kp2', 'kp3', 'kprt'],
+                    ['lctl', 'lmet', 'lalt', 'spc', 'ralt', 'rmet', 'menu', 'rctl', 'left', 'down', 'rght', 'kp0', 'kp.']
+                ],
+                layoutData: {
+                    'esc': {x: 0, y: 0, w: 1, h: 1},
+                    'f1': {x: 1.0, y: 0, w: 1, h: 1},
+                    'f2': {x: 0, y: 0, w: 1, h: 1},
+                    'f3': {x: 0, y: 0, w: 1, h: 1},
+                    'f4': {x: 0, y: 0, w: 1, h: 1},
+                    'f5': {x: 0.5, y: 0, w: 1, h: 1},
+                    'f6': {x: 0, y: 0, w: 1, h: 1},
+                    'f7': {x: 0, y: 0, w: 1, h: 1},
+                    'f8': {x: 0, y: 0, w: 1, h: 1},
+                    'f9': {x: 0.5, y: 0, w: 1, h: 1},
+                    'f10': {x: 0, y: 0, w: 1, h: 1},
+                    'f11': {x: 0, y: 0, w: 1, h: 1},
+                    'f12': {x: 0, y: 0, w: 1, h: 1},
+                    'prnt': {x: 0.25, y: 0, w: 1, h: 1},
+                    'slck': {x: 0, y: 0, w: 1, h: 1},
+                    'paus': {x: 0, y: 0, w: 1, h: 1},
+                    'grv': {x: 0, y: 0, w: 1, h: 1},
+                    '1': {x: 0, y: 0, w: 1, h: 1},
+                    '2': {x: 0, y: 0, w: 1, h: 1},
+                    '3': {x: 0, y: 0, w: 1, h: 1},
+                    '4': {x: 0, y: 0, w: 1, h: 1},
+                    '5': {x: 0, y: 0, w: 1, h: 1},
+                    '6': {x: 0, y: 0, w: 1, h: 1},
+                    '7': {x: 0, y: 0, w: 1, h: 1},
+                    '8': {x: 0, y: 0, w: 1, h: 1},
+                    '9': {x: 0, y: 0, w: 1, h: 1},
+                    '0': {x: 0, y: 0, w: 1, h: 1},
+                    '-': {x: 0, y: 0, w: 1, h: 1},
+                    '=': {x: 0, y: 0, w: 1, h: 1},
+                    'bspc': {x: 0, y: 0, w: 2, h: 1},
+                    'ins': {x: 0.25, y: 0, w: 1, h: 1},
+                    'home': {x: 0, y: 0, w: 1, h: 1},
+                    'pgup': {x: 0, y: 0, w: 1, h: 1},
+                    'nlck': {x: 0.25, y: 0, w: 1, h: 1},
+                    'kp/': {x: 0, y: 0, w: 1, h: 1},
+                    'kp*': {x: 0, y: 0, w: 1, h: 1},
+                    'kp-': {x: 0, y: 0, w: 1, h: 1},
+                    'tab': {x: 0, y: 0, w: 1.5, h: 1},
+                    'q': {x: 0, y: 0, w: 1, h: 1},
+                    'w': {x: 0, y: 0, w: 1, h: 1},
+                    'e': {x: 0, y: 0, w: 1, h: 1},
+                    'r': {x: 0, y: 0, w: 1, h: 1},
+                    't': {x: 0, y: 0, w: 1, h: 1},
+                    'y': {x: 0, y: 0, w: 1, h: 1},
+                    'u': {x: 0, y: 0, w: 1, h: 1},
+                    'i': {x: 0, y: 0, w: 1, h: 1},
+                    'o': {x: 0, y: 0, w: 1, h: 1},
+                    'p': {x: 0, y: 0, w: 1, h: 1},
+                    '[': {x: 0, y: 0, w: 1, h: 1},
+                    ']': {x: 0, y: 0, w: 1, h: 1},
+                    '\\': {x: 0, y: 0, w: 1.5, h: 1},
+                    'del': {x: 0.25, y: 0, w: 1, h: 1},
+                    'end': {x: 0, y: 0, w: 1, h: 1},
+                    'pgdn': {x: 0, y: 0, w: 1, h: 1},
+                    'kp7': {x: 0.25, y: 0, w: 1, h: 1},
+                    'kp8': {x: 0, y: 0, w: 1, h: 1},
+                    'kp9': {x: 0, y: 0, w: 1, h: 1},
+                    'kp+': {x: 0, y: 0, w: 1, h: 2},
+                    'caps': {x: 0, y: 0, w: 1.75, h: 1},
+                    'a': {x: 0, y: 0, w: 1, h: 1},
+                    's': {x: 0, y: 0, w: 1, h: 1},
+                    'd': {x: 0, y: 0, w: 1, h: 1},
+                    'f': {x: 0, y: 0, w: 1, h: 1},
+                    'g': {x: 0, y: 0, w: 1, h: 1},
+                    'h': {x: 0, y: 0, w: 1, h: 1},
+                    'j': {x: 0, y: 0, w: 1, h: 1},
+                    'k': {x: 0, y: 0, w: 1, h: 1},
+                    'l': {x: 0, y: 0, w: 1, h: 1},
+                    ';': {x: 0, y: 0, w: 1, h: 1},
+                    'ret': {x: 0, y: 0, w: 2.25, h: 1},
+                    'kp4': {x: 4.5, y: 0, w: 1, h: 1},
+                    'kp5': {x: 0, y: 0, w: 1, h: 1},
+                    'kp6': {x: 0, y: 0, w: 1, h: 1},
+                    'lsft': {x: 0, y: 0, w: 2.25, h: 1},
+                    'z': {x: 0, y: 0, w: 1, h: 1},
+                    'x': {x: 0, y: 0, w: 1, h: 1},
+                    'c': {x: 0, y: 0, w: 1, h: 1},
+                    'v': {x: 0, y: 0, w: 1, h: 1},
+                    'b': {x: 0, y: 0, w: 1, h: 1},
+                    'n': {x: 0, y: 0, w: 1, h: 1},
+                    'm': {x: 0, y: 0, w: 1, h: 1},
+                    ',': {x: 0, y: 0, w: 1, h: 1},
+                    '.': {x: 0, y: 0, w: 1, h: 1},
+                    '/': {x: 0, y: 0, w: 1, h: 1},
+                    'rsft': {x: 0, y: 0, w: 2.75, h: 1},
+                    'up': {x: 1.25, y: 0, w: 1, h: 1},
+                    'kp1': {x: 1.25, y: 0, w: 1, h: 1},
+                    'kp2': {x: 0, y: 0, w: 1, h: 1},
+                    'kp3': {x: 0, y: 0, w: 1, h: 1},
+                    'kprt': {x: 0, y: 0, w: 1, h: 2},
+                    'lctl': {x: 0, y: 0, w: 1.25, h: 1},
+                    'lmet': {x: 0, y: 0, w: 1.25, h: 1},
+                    'lalt': {x: 0, y: 0, w: 1.25, h: 1},
+                    'spc': {x: 0, y: 0, w: 6.25, h: 1},
+                    'ralt': {x: 0, y: 0, w: 1.25, h: 1},
+                    'rmet': {x: 0, y: 0, w: 1.25, h: 1},
+                    'menu': {x: 0, y: 0, w: 1.25, h: 1},
+                    'rctl': {x: 0, y: 0, w: 1.25, h: 1},
+                    'left': {x: 0.25, y: 0, w: 1, h: 1},
+                    'down': {x: 0, y: 0, w: 1, h: 1},
+                    'rght': {x: 0, y: 0, w: 1, h: 1},
+                    'kp0': {x: 0.25, y: 0, w: 2, h: 1},
+                    'kp.': {x: 0, y: 0, w: 1, h: 1}
+                }
             },
             'kinesis-freestyle': {
-                defsrc: ['esc', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'grv', '1', '2', '3', '4', '5', '6', 'tab', 'q', 'w', 'e', 'r', 't', 'caps', 'a', 's', 'd', 'f', 'g', 'lsft', 'z', 'x', 'c', 'v', 'b', 'ins', 'del', 'left', 'rght', 'lctl', 'lalt', 'home', 'end', 'bspc', 'lmet', 'f8', 'f9', 'f10', 'f11', 'f12', '7', '8', '9', '0', '-', '=', 'y', 'u', 'i', 'o', 'p', '[', ']', '\\', 'h', 'j', 'k', 'l', ';', '\'', 'n', 'm', ',', '.', '/', 'rsft', 'up', 'down', 'ralt', 'rctl', 'pgup', 'pgdn', 'rmet', 'ret', 'spc'],
-                layoutData: {'esc': {x: 0, y: 0, w: 1, h: 1}, 'f1': {x: 1, y: 0, w: 1, h: 1}, 'f2': {x: 2, y: 0, w: 1, h: 1}, 'f3': {x: 3, y: 0, w: 1, h: 1}, 'f4': {x: 4, y: 0, w: 1, h: 1}, 'f5': {x: 5, y: 0, w: 1, h: 1}, 'f6': {x: 6, y: 0, w: 1, h: 1}, 'f7': {x: 7, y: 0, w: 1, h: 1}, 'grv': {x: 0, y: 1, w: 1, h: 1}, '1': {x: 1, y: 1, w: 1, h: 1}, '2': {x: 2, y: 1, w: 1, h: 1}, '3': {x: 3, y: 1, w: 1, h: 1}, '4': {x: 4, y: 1, w: 1, h: 1}, '5': {x: 5, y: 1, w: 1, h: 1}, '6': {x: 6, y: 1, w: 1, h: 1}, 'tab': {x: 0, y: 2, w: 1.5, h: 1}, 'q': {x: 1.5, y: 2, w: 1, h: 1}, 'w': {x: 2.5, y: 2, w: 1, h: 1}, 'e': {x: 3.5, y: 2, w: 1, h: 1}, 'r': {x: 4.5, y: 2, w: 1, h: 1}, 't': {x: 5.5, y: 2, w: 1, h: 1}, 'caps': {x: 0, y: 3, w: 1.75, h: 1}, 'a': {x: 1.75, y: 3, w: 1, h: 1}, 's': {x: 2.75, y: 3, w: 1, h: 1}, 'd': {x: 3.75, y: 3, w: 1, h: 1}, 'f': {x: 4.75, y: 3, w: 1, h: 1}, 'g': {x: 5.75, y: 3, w: 1, h: 1}, 'lsft': {x: 0, y: 4, w: 2.25, h: 1}, 'z': {x: 2.25, y: 4, w: 1, h: 1}, 'x': {x: 3.25, y: 4, w: 1, h: 1}, 'c': {x: 4.25, y: 4, w: 1, h: 1}, 'v': {x: 5.25, y: 4, w: 1, h: 1}, 'b': {x: 6.25, y: 4, w: 1, h: 1}, 'ins': {x: 0, y: 5, w: 1, h: 1}, 'del': {x: 1, y: 5, w: 1, h: 1}, 'left': {x: 2, y: 5, w: 1, h: 1}, 'rght': {x: 3, y: 5, w: 1, h: 1}, 'lctl': {x: 2, y: 6, w: 1, h: 1}, 'lalt': {x: 3, y: 6, w: 1, h: 1}, 'home': {x: 2, y: 7, w: 1, h: 1}, 'end': {x: 3, y: 7, w: 1, h: 1}, 'bspc': {x: 3, y: 8, w: 1.5, h: 1}, 'lmet': {x: 4.5, y: 8, w: 1, h: 1}, 'f8': {x: 10, y: 0, w: 1, h: 1}, 'f9': {x: 11, y: 0, w: 1, h: 1}, 'f10': {x: 12, y: 0, w: 1, h: 1}, 'f11': {x: 13, y: 0, w: 1, h: 1}, 'f12': {x: 14, y: 0, w: 1, h: 1}, '7': {x: 10, y: 1, w: 1, h: 1}, '8': {x: 11, y: 1, w: 1, h: 1}, '9': {x: 12, y: 1, w: 1, h: 1}, '0': {x: 13, y: 1, w: 1, h: 1}, '-': {x: 14, y: 1, w: 1, h: 1}, '=': {x: 15, y: 1, w: 1, h: 1}, 'y': {x: 10.5, y: 2, w: 1, h: 1}, 'u': {x: 11.5, y: 2, w: 1, h: 1}, 'i': {x: 12.5, y: 2, w: 1, h: 1}, 'o': {x: 13.5, y: 2, w: 1, h: 1}, 'p': {x: 14.5, y: 2, w: 1, h: 1}, '[': {x: 15.5, y: 2, w: 1, h: 1}, ']': {x: 16.5, y: 2, w: 1, h: 1}, '\\': {x: 17.5, y: 2, w: 1.5, h: 1}, 'h': {x: 10.25, y: 3, w: 1, h: 1}, 'j': {x: 11.25, y: 3, w: 1, h: 1}, 'k': {x: 12.25, y: 3, w: 1, h: 1}, 'l': {x: 13.25, y: 3, w: 1, h: 1}, ';': {x: 14.25, y: 3, w: 1, h: 1}, '\'': {x: 15.25, y: 3, w: 1, h: 1}, 'n': {x: 10, y: 4, w: 1, h: 1}, 'm': {x: 11, y: 4, w: 1, h: 1}, ',': {x: 12, y: 4, w: 1, h: 1}, '.': {x: 13, y: 4, w: 1, h: 1}, '/': {x: 14, y: 4, w: 1, h: 1}, 'rsft': {x: 15, y: 4, w: 2.75, h: 1}, 'up': {x: 13, y: 5, w: 1, h: 1}, 'down': {x: 14, y: 5, w: 1, h: 1}, 'ralt': {x: 12, y: 6, w: 1, h: 1}, 'rctl': {x: 13, y: 6, w: 1, h: 1}, 'pgup': {x: 12, y: 7, w: 1, h: 1}, 'pgdn': {x: 13, y: 7, w: 1, h: 1}, 'rmet': {x: 11.5, y: 8, w: 1, h: 1}, 'ret': {x: 12.5, y: 8, w: 1.5, h: 1}, 'spc': {x: 14, y: 8, w: 1.5, h: 1}}
+                defsrc: ['esc', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12', '=', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', 'tab', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '\\', 'caps', 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\'', 'lsft', 'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/', 'rsft', 'grv', 'ins', 'left', 'rght', 'up', 'down', '[', ']', 'lctl', 'lalt', 'ralt', 'rctl', 'home', 'end', 'pgup', 'pgdn', 'bspc', 'del', 'lmet', 'rmet', 'spc', 'ret'],
+                grid: [
+                    ['esc', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12' ,'prnt', 'slck', 'paus', 'del'],
+                    ['grv', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', 'bspc', 'home'],
+                    ['tab', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']','\\', 'end'],
+                    ['caps', 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\'', 'ret', 'pgup'],
+                    ['lsft', 'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/', 'rsft', 'up', 'pgdn'],
+                    ['lctl', 'lmet', 'lalt', 'spc', 'ralt', 'rctl', 'left', 'down', 'rght'],
+                ],
+                layoutData: {
+                    'esc': {x: 0, y: 0, w: 1, h: 1},
+                    'f1': {x: 1.0, y: 0, w: 1, h: 1},
+                    'f2': {x: 0, y: 0, w: 1, h: 1},
+                    'f3': {x: 0, y: 0, w: 1, h: 1},
+                    'f4': {x: 0, y: 0, w: 1, h: 1},
+                    'f5': {x: 0, y: 0, w: 1, h: 1},
+                    'f6': {x: 0, y: 0, w: 1, h: 1},
+                    'f7': {x: 0, y: 0, w: 1, h: 1},
+                    'f8': {x: 2, y: 0, w: 1, h: 1},
+                    'f9': {x: 0, y: 0, w: 1, h: 1},
+                    'f10': {x: 0, y: 0, w: 1, h: 1},
+                    'f11': {x: 0, y: 0, w: 1, h: 1},
+                    'f12': {x: 0, y: 0, w: 1, h: 1},
+                    'prnt': {x: 0, y: 0, w: 1, h: 1},
+                    'slck': {x: 0, y: 0, w: 1, h: 1},
+                    'paus': {x: 0, y: 0, w: 1, h: 1},
+                    'del': {x: 0, y: 0, w: 1, h: 1},
+                    'grv': {x: 2, y: 0, w: 1, h: 1},
+                    '1': {x: 0, y: 0, w: 1, h: 1},
+                    '2': {x: 0, y: 0, w: 1, h: 1},
+                    '3': {x: 0, y: 0, w: 1, h: 1},
+                    '4': {x: 0, y: 0, w: 1, h: 1},
+                    '5': {x: 0, y: 0, w: 1, h: 1},
+                    '6': {x: 0, y: 0, w: 1, h: 1},
+                    '7': {x: 2, y: 0, w: 1, h: 1},
+                    '8': {x: 0, y: 0, w: 1, h: 1},
+                    '9': {x: 0, y: 0, w: 1, h: 1},
+                    '0': {x: 0, y: 0, w: 1, h: 1},
+                    '-': {x: 0, y: 0, w: 1, h: 1},
+                    '=': {x: 0, y: 0, w: 1, h: 1},
+                    'bspc': {x: 0, y: 0, w: 2, h: 1},
+                    'home': {x: 0, y: 0, w: 1, h: 1},
+                    'tab': {x: 2, y: 0, w: 1.5, h: 1},
+                    'q': {x: 0, y: 0, w: 1, h: 1},
+                    'w': {x: 0, y: 0, w: 1, h: 1},
+                    'e': {x: 0, y: 0, w: 1, h: 1},
+                    'r': {x: 0, y: 0, w: 1, h: 1},
+                    't': {x: 0, y: 0, w: 1, h: 1},
+                    'y': {x: 2.0, y: 0, w: 1, h: 1},
+                    'u': {x: 0, y: 0, w: 1, h: 1},
+                    'i': {x: 0, y: 0, w: 1, h: 1},
+                    'o': {x: 0, y: 0, w: 1, h: 1},
+                    'p': {x: 0, y: 0, w: 1, h: 1},
+                    '[': {x: 0, y: 0, w: 1, h: 1},
+                    ']': {x: 0, y: 0, w: 1, h: 1},
+                    '\\': {x: 0, y: 0, w: 1.5, h: 1},
+                    'end': {x: 0, y: 0, w: 1, h: 1},
+                    'caps': {x: 2, y: 0, w: 2, h: 1},
+                    'a': {x: 0, y: 0, w: 1, h: 1},
+                    's': {x: 0, y: 0, w: 1, h: 1},
+                    'd': {x: 0, y: 0, w: 1, h: 1},
+                    'f': {x: 0, y: 0, w: 1, h: 1},
+                    'g': {x: 0, y: 0, w: 1, h: 1},
+                    'h': {x: 1.75, y: 0, w: 1, h: 1},
+                    'j': {x: 0, y: 0, w: 1, h: 1},
+                    'k': {x: 0, y: 0, w: 1, h: 1},
+                    'l': {x: 0, y: 0, w: 1, h: 1},
+                    ';': {x: 0, y: 0, w: 1, h: 1},
+                    '\'': {x: 0, y: 0, w: 1, h: 1},
+                    'ret': {x: 0, y: 0, w: 2.25, h: 1},
+                    'pgup': {x: 0, y: 0, w: 1, h: 1},
+                    'lsft': {x: 2, y: 0, w: 2.5, h: 1},
+                    'z': {x: 0, y: 0, w: 1, h: 1},
+                    'x': {x: 0, y: 0, w: 1, h: 1},
+                    'c': {x: 0, y: 0, w: 1, h: 1},
+                    'v': {x: 0, y: 0, w: 1, h: 1},
+                    'b': {x: 0, y: 0, w: 1, h: 1},
+                    'n': {x: 1.75, y: 0, w: 1, h: 1},
+                    'm': {x: 0, y: 0, w: 1, h: 1},
+                    ',': {x: 0, y: 0, w: 1, h: 1},
+                    '.': {x: 0, y: 0, w: 1, h: 1},
+                    '/': {x: 0, y: 0, w: 1, h: 1},
+                    'rsft': {x: 0, y: 0, w: 1.75, h: 1},
+                    'up': {x: 0, y: 0, w: 1, h: 1},
+                    'pgdn': {x: 0, y: 0, w: 1, h: 1},
+                    'lctl': {x: 2, y: 0, w: 1.5, h: 1},
+                    'lmet': {x: 0, y: 0, w: 1, h: 1},
+                    'lalt': {x: 0, y: 0, w: 1.5, h: 1},
+                    'spc': {x: 0, y: 0, w: 7.75, h: 1},
+                    'ralt': {x: 0, y: 0, w: 1.5, h: 1},
+                    'rctl': {x: 0, y: 0, w: 1.75, h: 1},
+                    'left': {x: 0, y: 0, w: 1, h: 1},
+                    'down': {x: 0, y: 0, w: 1, h: 1},
+                    'rght': {x: 0, y: 0, w: 1, h: 1},
+                }
             }
         };
 
@@ -651,8 +1166,8 @@
         function parseConfig(text) {
             const tokens = tokenize(text);
             const config = {
-                defsrc: [],
-                layoutData: {},
+                defsrc: [],                layoutData: {
+                },
                 layers: {},
                 aliases: {}
             };
@@ -811,29 +1326,43 @@
                     });
 
                 for (const [key, data] of sortedKeys) {
-                    output += `;; ${JSON.stringify({key, x: data.x, y: data.y, w: data.w, h: data.h})}\n`;
+                    const obj = {key, x: data.x, y: data.y, w: data.w, h: data.h};
+                    output += `;; ${JSON.stringify(obj)}\n`;
                 }
                 output += ';; END_LAYOUT_DATA\n\n';
             }
 
-            // Generate defsrc
+            // Generate defsrc using grid structure for human-readable rows
             if (config.defsrc && config.defsrc.length > 0) {
                 output += '(defsrc\n';
-                // Format in rows for readability, grouping keys by y-position
-                const keysByRow = {};
-                config.defsrc.forEach(key => {
-                    const data = config.layoutData[key];
-                    if (data) {
-                        const y = data.y;
-                        if (!keysByRow[y]) keysByRow[y] = [];
-                        keysByRow[y].push(key);
-                    }
-                });
 
-                const sortedRows = Object.keys(keysByRow).map(Number).sort((a, b) => a - b);
-                for (const y of sortedRows) {
-                    output += '  ' + keysByRow[y].join(' ') + '\n';
+                if (config.grid && config.grid.length > 0) {
+                    // Use grid structure for row-based layout
+                    config.grid.forEach(row => {
+                        output += '  ';
+                        row.forEach(keyCode => {
+                            output += keyCode + ' ';
+                        });
+                        output += '\n';
+                    });
+                } else {
+                    // Fallback: group by y-position (legacy behavior)
+                    const keysByRow = {};
+                    config.defsrc.forEach(key => {
+                        const data = config.layoutData[key];
+                        if (data) {
+                            const y = data.y;
+                            if (!keysByRow[y]) keysByRow[y] = [];
+                            keysByRow[y].push(key);
+                        }
+                    });
+
+                    const sortedRows = Object.keys(keysByRow).map(Number).sort((a, b) => a - b);
+                    for (const y of sortedRows) {
+                        output += '  ' + keysByRow[y].join(' ') + '\n';
+                    }
                 }
+
                 output += ')\n\n';
             }
 
@@ -850,21 +1379,37 @@
             for (const [layerName, actions] of Object.entries(config.layers)) {
                 output += `(deflayer ${layerName}\n`;
 
-                // Group by rows like defsrc
-                const keysByRow = {};
-                config.defsrc.forEach((key, idx) => {
-                    const data = config.layoutData[key];
-                    if (data) {
-                        const y = data.y;
-                        if (!keysByRow[y]) keysByRow[y] = [];
-                        keysByRow[y].push(actions[idx] || key);
-                    }
-                });
+                if (config.grid && config.grid.length > 0) {
+                    // Use grid structure for row-based layout
+                    config.grid.forEach(row => {
+                        output += '  ';
+                        row.forEach(keyCode => {
 
-                const sortedRows = Object.keys(keysByRow).map(Number).sort((a, b) => a - b);
-                for (const y of sortedRows) {
-                    output += '  ' + keysByRow[y].join(' ') + '\n';
+                            // Find action by matching defsrc index
+                            const defsrcIndex = config.defsrc.indexOf(keyCode);
+                            const action = actions[defsrcIndex] || '_';
+                            output += action + ' ';
+                        });
+                        output += '\n';
+                    });
+                } else {
+                    // Fallback: group by y-position (legacy behavior)
+                    const keysByRow = {};
+                    config.defsrc.forEach((key, idx) => {
+                        const data = config.layoutData[key];
+                        if (data) {
+                            const y = data.y;
+                            if (!keysByRow[y]) keysByRow[y] = [];
+                            keysByRow[y].push(actions[idx] || key);
+                        }
+                    });
+
+                    const sortedRows = Object.keys(keysByRow).map(Number).sort((a, b) => a - b);
+                    for (const y of sortedRows) {
+                        output += '  ' + keysByRow[y].join(' ') + '\n';
+                    }
                 }
+
                 output += ')\n\n';
             }
 
@@ -920,17 +1465,60 @@
                 keyboard.style.position = 'relative';
                 keyboard.style.display = 'block';
 
-                // Calculate keyboard dimensions
-                let maxX = 0, maxY = 0;
-                for (const key of state.config.defsrc) {
-                    const layout = state.config.layoutData[key];
-                    if (layout) {
-                        maxX = Math.max(maxX, layout.x + layout.w);
-                        maxY = Math.max(maxY, layout.y + layout.h);
+                // Calculate cumulative positions from grid structure
+                const keyPositions = new Map(); // keyCode -> {x, y} in absolute units
+                const keyUnit = 50; // pixels per key unit
+
+                if (state.config.grid && state.config.grid.length > 0) {
+                    // Use grid to calculate cumulative positions
+                    let cumulativeY = 0;
+                    state.config.grid.forEach((row, rowIndex) => {
+                        let cumulativeX = 0;
+                        let rowHeight = 1; // Track the maximum height in this row
+
+                        // First pass: calculate positions and track row height
+                        const rowPositions = [];
+                        row.forEach(keyCode => {
+                            const layout = state.config.layoutData[keyCode];
+                            if (layout) {
+                                rowPositions.push({
+                                    keyCode,
+                                    x: cumulativeX + layout.x,
+                                    y: cumulativeY + layout.y
+                                });
+                                rowHeight = 1; // Math.max(rowHeight, layout.h);
+                                cumulativeX += layout.w + layout.x;
+                            }
+                        });
+
+                        // Second pass: store all positions for this row
+                        rowPositions.forEach(pos => {
+                            keyPositions.set(pos.keyCode, {x: pos.x, y: pos.y});
+                        });
+
+                        // Move to next row (cumulative Y increases by row height)
+                        cumulativeY += rowHeight;
+                    });
+                } else {
+                    // Fallback: use layout.x as absolute position (backwards compatibility)
+                    for (const keyCode in state.config.layoutData) {
+                        const layout = state.config.layoutData[keyCode];
+                        if (layout) {
+                            keyPositions.set(keyCode, {x: layout.x, y: layout.y});
+                        }
                     }
                 }
 
-                const keyUnit = 50; // pixels per key unit
+                // Calculate keyboard dimensions from cumulative positions
+                let maxX = 0, maxY = 0;
+                for (const [keyCode, pos] of keyPositions) {
+                    const layout = state.config.layoutData[keyCode];
+                    if (layout) {
+                        maxX = Math.max(maxX, pos.x + layout.w);
+                        maxY = Math.max(maxY, pos.y + layout.h);
+                    }
+                }
+
                 keyboard.style.width = `${maxX * keyUnit + 30}px`;
                 keyboard.style.height = `${maxY * keyUnit + 30}px`;
 
@@ -938,14 +1526,15 @@
                 state.config.defsrc.forEach((keyCode, index) => {
                     const action = layerActions[index] || keyCode;
                     const layout = state.config.layoutData[keyCode];
+                    const position = keyPositions.get(keyCode);
 
-                    if (!layout) return; // Skip if no layout data
+                    if (!layout || !position) return; // Skip if no layout data or position
 
                     const keyEl = document.createElement('div');
                     keyEl.className = 'key';
                     keyEl.style.position = 'absolute';
-                    keyEl.style.left = `${layout.x * keyUnit}px`;
-                    keyEl.style.top = `${layout.y * keyUnit}px`;
+                    keyEl.style.left = `${position.x * keyUnit}px`;
+                    keyEl.style.top = `${position.y * keyUnit}px`;
                     keyEl.style.width = `${layout.w * keyUnit - 4}px`;
                     keyEl.style.height = `${layout.h * keyUnit - 4}px`;
 
@@ -969,14 +1558,52 @@
                         }
                     }
 
+                    // Add layout editing features for base layer only
+                    const isBaseLayer = layerName === 'base';
+                    const inEditMode = state.ui.layoutEditMode && isBaseLayer;
+
+                    // Set innerHTML first
                     keyEl.innerHTML = `
+                        ${inEditMode ? `
+                            <div class="key-controls">
+                                <button class="key-control-btn" onclick="event.stopPropagation(); editKeyLayout('${keyCode}')">✎</button>
+                                <button class="key-control-btn delete" onclick="event.stopPropagation(); deleteKey('${keyCode}')">×</button>
+                            </div>
+                        ` : ''}
                         <div class="key-label">${keyCode}</div>
                         <div class="key-action">${formatAction(action)}</div>
                     `;
 
-                    keyEl.onclick = () => openKeyModal(index, keyCode, layerName);
+                    if (inEditMode) {
+                        keyEl.classList.add('layout-edit-mode');
+                        keyEl.draggable = true;
+
+                        // Add drag handlers AFTER setting innerHTML
+                        keyEl.addEventListener('dragstart', (e) => handleDragStart(e, keyCode));
+                        keyEl.addEventListener('dragend', (e) => handleDragEnd(e, keyCode));
+                        keyEl.addEventListener('dragover', (e) => handleDragOver(e, keyCode));
+                        keyEl.addEventListener('drop', (e) => handleDrop(e, keyCode));
+
+                        keyEl.onclick = (e) => {
+                            if (!e.target.classList.contains('key-control-btn')) {
+                                e.stopPropagation();
+                            }
+                        };
+                    } else {
+                        keyEl.onclick = () => openKeyModal(index, keyCode, layerName);
+                    }
+
                     keyboard.appendChild(keyEl);
                 });
+
+                // Add "Add Key" button in edit mode for base layer only
+                if (state.ui.layoutEditMode && layerName === 'base') {
+                    const addBtn = document.createElement('button');
+                    addBtn.className = 'add-key-btn';
+                    addBtn.textContent = '+';
+                    addBtn.onclick = addNewKey;
+                    keyboard.appendChild(addBtn);
+                }
 
                 layerSection.appendChild(keyboard);
                 container.appendChild(layerSection);
@@ -1289,13 +1916,6 @@ caps a    s    d    f    g    h    j    k    l    ;    '    ret                 
 lsft z    x    c    v    b    n    m    ,    .    /    rsft            up               kp0  kp.
 lctl lmet lalt           spc            ralt rmet menu rctl       left down rght`,
 
-            'iso-full': `esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12       prnt slck paus    nlck kp/  kp*  kp-
-grv  1    2    3    4    5    6    7    8    9    0    -    =    bspc  ins  home pgup    kp7  kp8  kp9  kp+
-tab  q    w    e    r    t    y    u    i    o    p    [    ]         del  end  pgdn    kp4  kp5  kp6
-caps a    s    d    f    g    h    j    k    l    ;    '    nuhs ret                     kp1  kp2  kp3  kprt
-lsft nubs z    x    c    v    b    n    m    ,    .    /    rsft       up               kp0  kp.
-lctl lmet lalt           spc            ralt rmet menu rctl       left down rght`,
-
             'kinesis-freestyle': `esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
 =    1    2    3    4    5
 tab  q    w    e    r    t
@@ -1315,18 +1935,15 @@ pgup pgdn
 rmet spc  ret`
         };
 
-        function openLayoutModal() {
-            document.getElementById('presetLayout').value = '';
-            document.getElementById('layoutPreview').innerHTML = 'Select a layout to see preview';
-            document.getElementById('layoutModal').classList.add('active');
+        function onLayoutSelectorChange() {
+            const preset = document.getElementById('layoutSelector').value;
+            if (!preset) {
+                return;  // User selected the placeholder option
+            }
+            applySelectedLayout(preset);
         }
 
-        function closeLayoutModal() {
-            document.getElementById('layoutModal').classList.remove('active');
-        }
-
-        function applySelectedLayout() {
-            const preset = document.getElementById('presetLayout').value;
+        function applySelectedLayout(preset) {
             if (!preset) {
                 alert('Please select a keyboard layout');
                 return;
@@ -1339,15 +1956,31 @@ rmet spc  ret`
                 // Save old defsrc for preserving layer mappings
                 const oldDefsrc = state.config.defsrc || [];
 
+                // Generate defsrc from grid (if available) or use legacy defsrc
+                const newDefsrc = layout.grid
+                    ? gridToDefsrc(layout.grid)
+                    : layout.defsrc.slice();
+
+                // Validation: check against old defsrc if present (for debugging)
+                if (layout.defsrc && layout.grid) {
+                    if (newDefsrc.length !== layout.defsrc.length) {
+                        console.error('Grid-to-defsrc mismatch!', {
+                            grid: newDefsrc.length,
+                            defsrc: layout.defsrc.length
+                        });
+                    }
+                }
+
                 // Apply the precise layout
-                state.config.defsrc = layout.defsrc.slice();
+                state.config.defsrc = newDefsrc;
+                state.config.grid = layout.grid ? JSON.parse(JSON.stringify(layout.grid)) : [];
                 state.config.layoutData = JSON.parse(JSON.stringify(layout.layoutData));
 
                 // Update all layers to match new defsrc length
                 for (const [layerName, layerActions] of Object.entries(state.config.layers)) {
                     const newActions = [];
                     // For each key in new defsrc, try to preserve the action from the old config
-                    layout.defsrc.forEach((keyCode) => {
+                    newDefsrc.forEach((keyCode) => {
                         const oldIndex = oldDefsrc.indexOf(keyCode);
                         if (oldIndex >= 0 && layerActions[oldIndex]) {
                             newActions.push(layerActions[oldIndex]);
@@ -1361,11 +1994,10 @@ rmet spc  ret`
 
                 // Ensure we have at least a base layer
                 if (Object.keys(state.config.layers).length === 0) {
-                    state.config.layers.base = layout.defsrc.slice();
+                    state.config.layers.base = newDefsrc.slice();
                     state.ui.activeLayer = 'base';
                 }
 
-                closeLayoutModal();
                 renderKeyboard();
                 return;
             }
@@ -1379,7 +2011,6 @@ rmet spc  ret`
 
             // Parse the preset layout
             parseAndApplyLayout(layoutText);
-            closeLayoutModal();
             renderKeyboard();
         }
 
@@ -1651,8 +2282,343 @@ rmet spc  ret`
             renderKeyboard();
         }
 
-        // Initialize
-        renderKeyboard();
+        // ==================== LAYOUT EDITOR ====================
+        let draggedKey = null;
+        const keyUnit = 50; // Must match the keyUnit in renderKeyboard
+
+        function toggleLayoutEditMode() {
+            state.ui.layoutEditMode = !state.ui.layoutEditMode;
+            const banner = document.getElementById('layoutEditBanner');
+            const btn = document.getElementById('layoutEditBtn');
+
+            if (state.ui.layoutEditMode) {
+                banner.classList.add('active');
+                btn.textContent = 'Exit Layout Edit Mode';
+                btn.classList.add('btn-danger');
+            } else {
+                banner.classList.remove('active');
+                btn.textContent = 'Edit Keyboard Layout';
+                btn.classList.remove('btn-danger');
+            }
+
+            renderKeyboard();
+        }
+
+        function handleDragStart(e, keyCode) {
+            state.ui.draggedKey = keyCode;
+            state.ui.draggedIndex = state.config.defsrc.indexOf(keyCode);
+            e.target.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', keyCode);
+        }
+
+        function handleDragEnd(e, keyCode) {
+            e.target.classList.remove('dragging');
+
+            // Remove insert indicator
+            const indicator = document.getElementById('insert-indicator');
+            if (indicator) indicator.remove();
+
+            state.ui.draggedKey = null;
+            state.ui.draggedIndex = -1;
+            state.ui.currentDropTarget = null;
+            state.ui.insertBefore = true;
+        }
+
+        function handleDragOver(e, keyCode) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+
+            if (!state.ui.draggedKey || state.ui.draggedKey === keyCode) return;
+
+            // Calculate which side of the key we're on
+            const rect = e.currentTarget.getBoundingClientRect();
+            const mouseX = e.clientX;
+            const keyMiddle = rect.left + rect.width / 2;
+            const insertBefore = mouseX < keyMiddle;
+
+            // Update drop target info
+            state.ui.currentDropTarget = keyCode;
+            state.ui.insertBefore = insertBefore;
+
+            // Update insert indicator position
+            updateInsertIndicator(e.currentTarget, insertBefore);
+        }
+
+        function updateInsertIndicator(keyElement, insertBefore) {
+            let indicator = document.getElementById('insert-indicator');
+            if (!indicator) {
+                indicator = document.createElement('div');
+                indicator.id = 'insert-indicator';
+                indicator.className = 'insert-indicator';
+                keyElement.parentElement.appendChild(indicator);
+            }
+
+            const rect = keyElement.getBoundingClientRect();
+            const parent = keyElement.parentElement.getBoundingClientRect();
+
+            const x = insertBefore ? rect.left - parent.left - 2 : rect.right - parent.left - 2;
+            const y = rect.top - parent.top;
+            const height = rect.height;
+
+            indicator.style.left = `${x}px`;
+            indicator.style.top = `${y}px`;
+            indicator.style.height = `${height}px`;
+        }
+
+        function handleDrop(e, targetKeyCode) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            if (!state.ui.draggedKey || state.ui.draggedKey === targetKeyCode) return;
+
+            const draggedKeyCode = state.ui.draggedKey;
+            const draggedLayout = state.config.layoutData[draggedKeyCode];
+            const targetLayout = state.config.layoutData[targetKeyCode];
+            const insertBefore = state.ui.insertBefore !== false; // default to true
+
+            // Store the dragged key's original position
+            const originalX = draggedLayout.x;
+            const originalY = draggedLayout.y;
+
+            // Calculate insert position
+            let insertX, insertY;
+            if (insertBefore) {
+                // Insert before target
+                insertX = targetLayout.x;
+                insertY = targetLayout.y;
+            } else {
+                // Insert after target (to the right)
+                insertX = targetLayout.x + targetLayout.w;
+                insertY = targetLayout.y;
+            }
+
+            // Move dragged key to target position
+            draggedLayout.x = insertX;
+            draggedLayout.y = insertY;
+
+            // Shift all keys that need to move
+            const allKeys = Object.keys(state.config.layoutData);
+            const sameRow = Math.abs(originalY - insertY) < 0.1;
+
+            for (const keyCode of allKeys) {
+                if (keyCode === draggedKeyCode) continue;
+
+                const layout = state.config.layoutData[keyCode];
+
+                if (sameRow) {
+                    // Moving within same row
+                    if (Math.abs(layout.y - originalY) < 0.1) {
+                        if (originalX < insertX) {
+                            // Moving right: keys between original and target shift left
+                            if (layout.x > originalX && layout.x < insertX) {
+                                layout.x -= draggedLayout.w;
+                            }
+                        } else {
+                            // Moving left: keys between target and original shift right
+                            if (layout.x >= insertX && layout.x < originalX) {
+                                layout.x += draggedLayout.w;
+                            }
+                        }
+                    }
+                } else {
+                    // Moving to different row
+                    // On original row: shift keys after original position left
+                    if (Math.abs(layout.y - originalY) < 0.1 && layout.x > originalX) {
+                        layout.x -= draggedLayout.w;
+                    }
+                    // On target row: shift keys at/after insert position right
+                    else if (Math.abs(layout.y - insertY) < 0.1 && layout.x >= insertX) {
+                        layout.x += draggedLayout.w;
+                    }
+                }
+            }
+
+            // REBUILD defsrc and all layers based on visual position (top-to-bottom, left-to-right)
+            rebuildDefsrcFromLayout();
+
+            state.ui.draggedKey = null;
+            state.ui.draggedIndex = -1;
+            state.ui.currentDropTarget = null;
+
+            renderKeyboard();
+        }
+
+        function rebuildDefsrcFromLayout() {
+            // Get all keys with their positions
+            const keysWithPositions = Object.keys(state.config.layoutData).map(keyCode => ({
+                keyCode,
+                x: state.config.layoutData[keyCode].x,
+                y: state.config.layoutData[keyCode].y
+            }));
+
+            // Sort by position: top-to-bottom (y), then left-to-right (x)
+            keysWithPositions.sort((a, b) => {
+                if (Math.abs(a.y - b.y) < 0.1) {
+                    // Same row, sort by x
+                    return a.x - b.x;
+                }
+                // Different rows, sort by y
+                return a.y - b.y;
+            });
+
+            // Create old defsrc index map
+            const oldIndexMap = {};
+            state.config.defsrc.forEach((keyCode, index) => {
+                oldIndexMap[keyCode] = index;
+            });
+
+            // Build new defsrc
+            const newDefsrc = keysWithPositions.map(k => k.keyCode);
+
+            // Rebuild all layer arrays based on new order
+            const newLayers = {};
+            for (const layerName in state.config.layers) {
+                newLayers[layerName] = newDefsrc.map(keyCode => {
+                    const oldIndex = oldIndexMap[keyCode];
+                    return state.config.layers[layerName][oldIndex];
+                });
+            }
+
+            // Update state
+            state.config.defsrc = newDefsrc;
+            state.config.layers = newLayers;
+        }
+
+        function editKeyLayout(keyCode) {
+            const layout = state.config.layoutData[keyCode];
+            const newX = prompt(`Enter X position for ${keyCode} (current: ${layout.x}):`, layout.x);
+            if (newX === null) return;
+
+            const newY = prompt(`Enter Y position for ${keyCode} (current: ${layout.y}):`, layout.y);
+            if (newY === null) return;
+
+            const newW = prompt(`Enter width for ${keyCode} (current: ${layout.w}):`, layout.w);
+            if (newW === null) return;
+
+            const newH = prompt(`Enter height for ${keyCode} (current: ${layout.h}):`, layout.h || 1);
+            if (newH === null) return;
+
+            // Validate inputs
+            const x = parseFloat(newX);
+            const y = parseFloat(newY);
+            const w = parseFloat(newW);
+            const h = parseFloat(newH);
+
+            if (isNaN(x) || isNaN(y) || isNaN(w) || isNaN(h)) {
+                alert('Invalid input. Please enter valid numbers.');
+                return;
+            }
+
+            if (w <= 0 || h <= 0) {
+                alert('Width and height must be greater than 0.');
+                return;
+            }
+
+            state.config.layoutData[keyCode] = { x, y, w, h };
+            renderKeyboard();
+        }
+
+        function deleteKey(keyCode) {
+            if (!confirm(`Delete key "${keyCode}" from the layout?\n\nThis will remove it from all layers.`)) {
+                return;
+            }
+
+            // Find index of key in defsrc
+            const index = state.config.defsrc.indexOf(keyCode);
+            if (index === -1) return;
+
+            // Remove from defsrc
+            state.config.defsrc.splice(index, 1);
+
+            // Remove from layoutData
+            delete state.config.layoutData[keyCode];
+
+            // Remove from all layers
+            for (const layerName in state.config.layers) {
+                state.config.layers[layerName].splice(index, 1);
+            }
+
+            renderKeyboard();
+        }
+
+        function addNewKey() {
+            const keyCode = prompt('Enter key code (e.g., "a", "esc", "spc"):');
+            if (!keyCode) return;
+
+            // Check if key already exists
+            if (state.config.defsrc.includes(keyCode)) {
+                alert(`Key "${keyCode}" already exists in the layout.`);
+                return;
+            }
+
+            const x = prompt('Enter X position:', '0');
+            if (x === null) return;
+
+            const y = prompt('Enter Y position:', '0');
+            if (y === null) return;
+
+            const w = prompt('Enter width:', '1');
+            if (w === null) return;
+
+            const h = prompt('Enter height:', '1');
+            if (h === null) return;
+
+            // Validate inputs
+            const xNum = parseFloat(x);
+            const yNum = parseFloat(y);
+            const wNum = parseFloat(w);
+            const hNum = parseFloat(h);
+
+            if (isNaN(xNum) || isNaN(yNum) || isNaN(wNum) || isNaN(hNum)) {
+                alert('Invalid input. Please enter valid numbers.');
+                return;
+            }
+
+            if (wNum <= 0 || hNum <= 0) {
+                alert('Width and height must be greater than 0.');
+                return;
+            }
+
+            // Add to defsrc
+            state.config.defsrc.push(keyCode);
+
+            // Add to layoutData
+            state.config.layoutData[keyCode] = { x: xNum, y: yNum, w: wNum, h: hNum };
+
+            // Add to all layers with default value (same as keyCode)
+            for (const layerName in state.config.layers) {
+                state.config.layers[layerName].push(keyCode);
+            }
+
+            renderKeyboard();
+        }
+
+        // Initialize with default ANSI full keyboard layout
+        function initializeDefaultLayout() {
+            // Load ANSI full layout by default
+            const defaultLayout = PRECISE_LAYOUTS['ansi-full'];
+
+            if (defaultLayout) {
+                // Generate defsrc from grid
+                const defsrc = defaultLayout.grid
+                    ? gridToDefsrc(defaultLayout.grid)
+                    : defaultLayout.defsrc.slice();
+
+                // Set up the state with the default layout
+                state.config.defsrc = defsrc;
+                state.config.grid = JSON.parse(JSON.stringify(defaultLayout.grid));
+                state.config.layoutData = JSON.parse(JSON.stringify(defaultLayout.layoutData));
+
+                // Create a default base layer with passthrough (each key maps to itself)
+                state.config.layers.base = defsrc.slice();
+                state.ui.activeLayer = 'base';
+            }
+
+            renderKeyboard();
+        }
+
+        initializeDefaultLayout();
     </script>
 </body>
 </html>

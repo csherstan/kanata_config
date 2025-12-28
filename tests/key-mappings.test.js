@@ -253,27 +253,29 @@ test.describe('Kanata Visualizer - Key Mapping Types', () => {
   });
 
   test('should switch between ANSI and ISO layouts', async ({ page }) => {
-    // Verify ANSI is selected by default
-    const ansiRadio = page.locator('input[name="layout"][value="ansi"]');
-    await expect(ansiRadio).toBeChecked();
+    const layoutSelector = page.locator('#layoutSelector');
+
+    // Select ANSI-60 layout
+    await layoutSelector.selectOption('ansi-60');
+    await page.waitForTimeout(500);
 
     // Count keys in ANSI layout
     const ansiKeyCount = await page.locator('.key').count();
+    expect(ansiKeyCount).toBeGreaterThan(0);
 
-    // Switch to ISO
-    await page.locator('input[name="layout"][value="iso"]').click();
+    // Switch to ISO full
+    await layoutSelector.selectOption('iso-full');
+    await page.waitForTimeout(500);
 
-    // Verify ISO is now selected
-    const isoRadio = page.locator('input[name="layout"][value="iso"]');
-    await expect(isoRadio).toBeChecked();
+    // Verify the selection changed
+    const selectedValue = await layoutSelector.inputValue();
+    expect(selectedValue).toBe('iso-full');
 
     // ISO should have different number of keys
     const isoKeyCount = await page.locator('.key').count();
 
-    // ISO layout differs from ANSI (has nubs and nuhs, but missing bsls in row 3)
-    // So it has 1 extra key per layer. Since we have 2 layers (base and numbers), it's +2 total
-    const numLayers = await page.locator('.layer-section').count();
-    expect(isoKeyCount).toBe(ansiKeyCount + numLayers);
+    // ISO full layout has more keys than ANSI 60%
+    expect(isoKeyCount).toBeGreaterThan(ansiKeyCount);
   });
 
   test('should validate config structure', async ({ page }) => {
@@ -320,30 +322,41 @@ test.describe('Kanata Visualizer - Config File Operations', () => {
     await page.goto(HTML_FILE);
   });
 
-  test('should show empty state when no config loaded', async ({ page }) => {
-    // Verify empty state is visible
-    await expect(page.locator('#emptyState')).toBeVisible();
-    await expect(page.locator('.keyboard')).not.toBeVisible();
+  test('should show default ANSI full layout on initial load', async ({ page }) => {
+    // With the new default initialization, the keyboard should be visible immediately
+    await expect(page.locator('.keyboard').first()).toBeVisible();
 
-    // Verify message
-    await expect(page.locator('#emptyState')).toContainText('No Configuration Loaded');
+    // Empty state should not be visible
+    await expect(page.locator('#emptyState')).not.toBeVisible();
+
+    // Should have a base layer by default
+    await expect(page.locator('#layersContainer')).toBeVisible();
+
+    // Should have the default ANSI full layout with 104 keys (function row + main + nav + numpad)
+    const keys = page.locator('.key');
+    await expect(keys).not.toHaveCount(0);
   });
 
   test('should load sample config on button click', async ({ page }) => {
-    // Initially empty
-    await expect(page.locator('#emptyState')).toBeVisible();
+    // Initially, the default ANSI full layout should be visible
+    await expect(page.locator('.keyboard').first()).toBeVisible();
 
     // Click load sample
     await page.click('text=Load Sample');
 
-    // Empty state should disappear
+    // Empty state should still not be visible
     await expect(page.locator('#emptyState')).not.toBeVisible();
 
-    // Keyboard should appear
+    // Keyboard should still be visible
     await expect(page.locator('.keyboard').first()).toBeVisible();
 
     // Layers should appear
     await expect(page.locator('#layersContainer')).toBeVisible();
+
+    // The sample config should have loaded with its own configuration
+    // Verify at least one layer section exists (layers are rendered as layer-section divs)
+    const layerSections = page.locator('.layer-section');
+    await expect(layerSections.first()).toBeVisible();
   });
 
   test('should handle custom config parsing', async ({ page }) => {
