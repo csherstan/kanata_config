@@ -132,68 +132,40 @@
             cursor: pointer;
         }
 
-        .layers {
-            padding: 20px 30px;
-            background: white;
-            border-bottom: 2px solid #e9ecef;
+        .layer-section {
+            margin-bottom: 40px;
+        }
+
+        .layer-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .layer-title {
+            font-size: 1.5em;
+            font-weight: 700;
+        }
+
+        .layer-actions {
             display: flex;
             gap: 10px;
-            overflow-x: auto;
         }
 
-        .layer-tab {
-            padding: 10px 20px;
-            border: 2px solid #dee2e6;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.2s;
-            white-space: nowrap;
-            position: relative;
-            background: white;
-        }
-
-        .layer-tab:hover {
-            border-color: #667eea;
+        .add-layer-section {
+            padding: 20px 30px;
             background: #f8f9fa;
-        }
-
-        .layer-tab.active {
-            background: #667eea;
-            color: white;
-            border-color: #667eea;
-        }
-
-        .layer-tab .delete-btn {
-            display: none;
-            position: absolute;
-            top: -8px;
-            right: -8px;
-            background: #dc3545;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            font-size: 12px;
-            cursor: pointer;
-            line-height: 1;
-        }
-
-        .layer-tab:hover .delete-btn {
-            display: block;
-        }
-
-        .layer-tab-add {
-            background: #28a745;
-            color: white;
-            border-color: #28a745;
+            border-bottom: 2px solid #e9ecef;
+            text-align: center;
         }
 
         .keyboard-container {
-            padding: 40px;
+            padding: 20px 30px 40px 30px;
             background: #f8f9fa;
-            min-height: 400px;
         }
 
         .keyboard {
@@ -203,7 +175,7 @@
             margin: 0 auto;
             background: #343a40;
             padding: 15px;
-            border-radius: 8px;
+            border-radius: 0 0 8px 8px;
         }
 
         .key {
@@ -438,15 +410,17 @@
             </div>
         </div>
 
-        <div id="layersContainer" class="layers" style="display: none;"></div>
-
         <div class="keyboard-container">
             <div id="emptyState" class="empty-state">
                 <h2>No Configuration Loaded</h2>
                 <p>Load an existing Kanata config file or create a sample configuration to get started</p>
                 <button class="btn" onclick="createSampleConfig()">Create Sample Config</button>
             </div>
-            <div id="keyboard" class="keyboard" style="display: none;"></div>
+            <div id="layersContainer"></div>
+        </div>
+
+        <div class="add-layer-section" id="addLayerSection" style="display: none;">
+            <button class="btn btn-success" onclick="openLayerModal()">+ New Layer</button>
         </div>
     </div>
 
@@ -855,64 +829,98 @@
 
         // ==================== KEYBOARD RENDERER ====================
         function renderKeyboard() {
-            const keyboard = document.getElementById('keyboard');
+            const container = document.getElementById('layersContainer');
             const layout = KEYBOARD_LAYOUTS[state.ui.keyboardLayout];
-            const currentLayer = state.config.layers[state.ui.activeLayer];
 
-            if (!currentLayer || state.config.defsrc.length === 0) {
-                keyboard.style.display = 'none';
+            if (Object.keys(state.config.layers).length === 0 || state.config.defsrc.length === 0) {
+                container.innerHTML = '';
                 document.getElementById('emptyState').style.display = 'block';
+                document.getElementById('addLayerSection').style.display = 'none';
                 return;
             }
 
-            keyboard.style.display = 'grid';
             document.getElementById('emptyState').style.display = 'none';
-            keyboard.innerHTML = '';
+            document.getElementById('addLayerSection').style.display = 'block';
+            container.innerHTML = '';
 
-            // Set up grid
-            keyboard.style.gridTemplateColumns = `repeat(${layout.cols * 4}, 1fr)`;
-            keyboard.style.gridTemplateRows = `repeat(${layout.rows}, 1fr)`;
+            // Render each layer
+            for (const [layerName, layerActions] of Object.entries(state.config.layers)) {
+                const layerSection = document.createElement('div');
+                layerSection.className = 'layer-section';
 
-            // Render keys
-            layout.keys.forEach((keyDef, visualIndex) => {
-                const defsrcIndex = state.config.defsrc.indexOf(keyDef.code);
-                const action = defsrcIndex >= 0 ? currentLayer[defsrcIndex] : keyDef.code;
+                // Create header
+                const header = document.createElement('div');
+                header.className = 'layer-header';
 
-                const keyEl = document.createElement('div');
-                keyEl.className = 'key';
-                keyEl.style.gridColumn = `${Math.floor(keyDef.col * 4)} / span ${Math.floor(keyDef.width * 4)}`;
-                keyEl.style.gridRow = keyDef.row;
+                const title = document.createElement('div');
+                title.className = 'layer-title';
+                title.textContent = layerName;
 
-                // Add styling based on action
-                if (defsrcIndex >= 0) {
-                    if (action !== keyDef.code) {
-                        if (action === '_' || action === 'XX') {
-                            keyEl.classList.add('transparent');
-                        } else if (action.startsWith('@')) {
-                            const aliasValue = state.config.aliases[action.substring(1)];
-                            if (aliasValue && aliasValue.includes('layer')) {
+                const actions = document.createElement('div');
+                actions.className = 'layer-actions';
+
+                if (Object.keys(state.config.layers).length > 1) {
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'btn btn-sm btn-danger';
+                    deleteBtn.textContent = 'Delete Layer';
+                    deleteBtn.onclick = () => deleteLayer(layerName);
+                    actions.appendChild(deleteBtn);
+                }
+
+                header.appendChild(title);
+                header.appendChild(actions);
+                layerSection.appendChild(header);
+
+                // Create keyboard for this layer
+                const keyboard = document.createElement('div');
+                keyboard.className = 'keyboard';
+                keyboard.style.gridTemplateColumns = `repeat(${layout.cols * 4}, 1fr)`;
+                keyboard.style.gridTemplateRows = `repeat(${layout.rows}, 1fr)`;
+
+                // Render keys
+                layout.keys.forEach((keyDef) => {
+                    const defsrcIndex = state.config.defsrc.indexOf(keyDef.code);
+                    const action = defsrcIndex >= 0 ? layerActions[defsrcIndex] : keyDef.code;
+
+                    const keyEl = document.createElement('div');
+                    keyEl.className = 'key';
+                    keyEl.style.gridColumn = `${Math.floor(keyDef.col * 4)} / span ${Math.floor(keyDef.width * 4)}`;
+                    keyEl.style.gridRow = keyDef.row;
+
+                    // Add styling based on action
+                    if (defsrcIndex >= 0) {
+                        if (action !== keyDef.code) {
+                            if (action === '_' || action === 'XX') {
+                                keyEl.classList.add('transparent');
+                            } else if (action.startsWith('@')) {
+                                const aliasValue = state.config.aliases[action.substring(1)];
+                                if (aliasValue && aliasValue.includes('layer')) {
+                                    keyEl.classList.add('layer-switch');
+                                } else {
+                                    keyEl.classList.add('modified');
+                                }
+                            } else if (typeof action === 'string' && action.includes('layer')) {
                                 keyEl.classList.add('layer-switch');
+                            } else if (typeof action === 'string' && action.includes('tap-hold')) {
+                                keyEl.classList.add('tap-hold');
                             } else {
                                 keyEl.classList.add('modified');
                             }
-                        } else if (typeof action === 'string' && action.includes('layer')) {
-                            keyEl.classList.add('layer-switch');
-                        } else if (typeof action === 'string' && action.includes('tap-hold')) {
-                            keyEl.classList.add('tap-hold');
-                        } else {
-                            keyEl.classList.add('modified');
                         }
                     }
-                }
 
-                keyEl.innerHTML = `
-                    <div class="key-label">${keyDef.code}</div>
-                    <div class="key-action">${formatAction(action)}</div>
-                `;
+                    keyEl.innerHTML = `
+                        <div class="key-label">${keyDef.code}</div>
+                        <div class="key-action">${formatAction(action)}</div>
+                    `;
 
-                keyEl.onclick = () => openKeyModal(defsrcIndex >= 0 ? defsrcIndex : -1, keyDef.code);
-                keyboard.appendChild(keyEl);
-            });
+                    keyEl.onclick = () => openKeyModal(defsrcIndex >= 0 ? defsrcIndex : -1, keyDef.code, layerName);
+                    keyboard.appendChild(keyEl);
+                });
+
+                layerSection.appendChild(keyboard);
+                container.appendChild(layerSection);
+            }
         }
 
         function formatAction(action) {
@@ -930,51 +938,11 @@
 
         // ==================== LAYER MANAGEMENT ====================
         function renderLayers() {
-            const container = document.getElementById('layersContainer');
-
-            if (Object.keys(state.config.layers).length === 0) {
-                container.style.display = 'none';
-                return;
-            }
-
-            container.style.display = 'flex';
-            container.innerHTML = '';
-
-            for (const layerName of Object.keys(state.config.layers)) {
-                const tab = document.createElement('div');
-                tab.className = 'layer-tab';
-                if (layerName === state.ui.activeLayer) {
-                    tab.classList.add('active');
-                }
-                tab.textContent = layerName;
-                tab.onclick = () => switchLayer(layerName);
-
-                if (Object.keys(state.config.layers).length > 1) {
-                    const deleteBtn = document.createElement('button');
-                    deleteBtn.className = 'delete-btn';
-                    deleteBtn.textContent = '×';
-                    deleteBtn.onclick = (e) => {
-                        e.stopPropagation();
-                        deleteLayer(layerName);
-                    };
-                    tab.appendChild(deleteBtn);
-                }
-
-                container.appendChild(tab);
-            }
-
-            // Add new layer button
-            const addTab = document.createElement('div');
-            addTab.className = 'layer-tab layer-tab-add';
-            addTab.textContent = '+ New Layer';
-            addTab.onclick = openLayerModal;
-            container.appendChild(addTab);
+            // No longer needed - layers are rendered directly in renderKeyboard
         }
 
         function switchLayer(layerName) {
-            state.ui.activeLayer = layerName;
-            renderLayers();
-            renderKeyboard();
+            // No longer needed - all layers are visible at once
         }
 
         function deleteLayer(layerName) {
@@ -988,12 +956,6 @@
             }
 
             delete state.config.layers[layerName];
-
-            if (state.ui.activeLayer === layerName) {
-                state.ui.activeLayer = Object.keys(state.config.layers)[0];
-            }
-
-            renderLayers();
             renderKeyboard();
         }
 
@@ -1021,24 +983,23 @@
 
             // Create new layer with all transparent keys
             state.config.layers[name] = state.config.defsrc.map(() => '_');
-            state.ui.activeLayer = name;
 
             closeLayerModal();
-            renderLayers();
             renderKeyboard();
         }
 
         // ==================== KEY EDITING ====================
-        function openKeyModal(defsrcIndex, keyCode) {
+        function openKeyModal(defsrcIndex, keyCode, layerName) {
             if (defsrcIndex < 0) {
                 alert('This key is not in the defsrc. Add it to defsrc first to configure it.');
                 return;
             }
 
             state.ui.editingKeyIndex = defsrcIndex;
+            state.ui.activeLayer = layerName;  // Track which layer is being edited
 
             const modal = document.getElementById('keyModal');
-            const action = state.config.layers[state.ui.activeLayer][defsrcIndex];
+            const action = state.config.layers[layerName][defsrcIndex];
 
             document.getElementById('keyLabel').value = state.config.defsrc[defsrcIndex];
 
@@ -1191,9 +1152,6 @@
                     }
 
                     state.config = config;
-                    state.ui.activeLayer = Object.keys(config.layers)[0];
-
-                    renderLayers();
                     renderKeyboard();
                 } catch (error) {
                     alert('Error parsing config: ' + error.message);
@@ -1248,9 +1206,6 @@
             };
 
             state.config = sampleConfig;
-            state.ui.activeLayer = 'base';
-
-            renderLayers();
             renderKeyboard();
         }
 

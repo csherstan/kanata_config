@@ -14,15 +14,15 @@ test.describe('Kanata Visualizer - Key Mapping Types', () => {
     await page.goto(HTML_FILE);
     // Load the sample config to have a base to work with
     await page.click('text=Load Sample');
-    await expect(page.locator('#keyboard')).toBeVisible();
+    await expect(page.locator('.keyboard').first()).toBeVisible();
   });
 
   test('should load sample configuration successfully', async ({ page }) => {
     // Verify the keyboard is displayed
-    await expect(page.locator('#keyboard')).toBeVisible();
+    await expect(page.locator('.keyboard').first()).toBeVisible();
 
     // Verify layers are displayed
-    await expect(page.locator('.layer-tab.active')).toContainText('base');
+    await expect(page.locator('.layer-header').first()).toContainText('base');
 
     // Verify keys are rendered
     const keys = page.locator('.key');
@@ -76,11 +76,8 @@ test.describe('Kanata Visualizer - Key Mapping Types', () => {
     await page.locator('#newLayerName').fill('symbols');
     await page.click('#layerModal button:has-text("Create")');
 
-    // Switch back to base layer
-    await page.click('.layer-tab:has-text("base")');
-
-    // Click on a key
-    const key = page.locator('.key').filter({ hasText: 'w' }).first();
+    // All layers are visible, so click on a key in the base layer
+    const key = page.locator('.layer-section').filter({ hasText: /^base/ }).locator('.key').filter({ hasText: 'w' }).first();
     await key.click();
 
     // Select layer-switch action type
@@ -104,16 +101,12 @@ test.describe('Kanata Visualizer - Key Mapping Types', () => {
     await page.locator('#newLayerName').fill('nav');
     await page.click('#layerModal button:has-text("Create")');
 
-    // Wait for layer modal to close and keyboard to be visible
+    // Wait for layer modal to close and layer to be visible
     await expect(page.locator('#layerModal.active')).not.toBeVisible();
-    await expect(page.locator('.layer-tab:has-text("nav")')).toBeVisible();
+    await expect(page.locator('.layer-header').filter({ hasText: 'nav' })).toBeVisible();
 
-    // Switch back to base layer
-    await page.click('.layer-tab:has-text("base")');
-    await expect(page.locator('.layer-tab.active')).toContainText('base');
-
-    // Click on the 'u' key  (using a different key)
-    await page.click('.key:has(.key-label:text-is("u"))');
+    // Click on the 'u' key in the base layer (using a different key)
+    await page.locator('.layer-section').filter({ hasText: /^base/ }).locator('.key:has(.key-label:text-is("u"))').click();
 
     // Wait for modal to be visible
     await expect(page.locator('#keyModal.active')).toBeVisible();
@@ -127,8 +120,8 @@ test.describe('Kanata Visualizer - Key Mapping Types', () => {
     // Save
     await page.click('#keyModal button:has-text("Save")');
 
-    // Verify the key has layer styling
-    const key = page.locator('.key:has(.key-label:text-is("u"))');
+    // Verify the key has layer styling in the base layer
+    const key = page.locator('.layer-section').filter({ hasText: /^base/ }).locator('.key:has(.key-label:text-is("u"))');
     await expect(key).toHaveClass(/layer-switch/);
     await expect(key.locator('.key-action')).toContainText('layer');
   });
@@ -187,8 +180,8 @@ test.describe('Kanata Visualizer - Key Mapping Types', () => {
     // Wait for aliases modal to close
     await expect(page.locator('#aliasesModal.active')).not.toBeVisible();
 
-    // Now use the alias in a key mapping - click on the 'i' key
-    await page.click('.key:has(.key-label:text-is("i"))');
+    // Now use the alias in a key mapping - click on the 'i' key in the base layer
+    await page.locator('.layer-section').filter({ hasText: /^base/ }).locator('.key:has(.key-label:text-is("i"))').click();
 
     // Wait for modal
     await expect(page.locator('#keyModal.active')).toBeVisible();
@@ -202,8 +195,8 @@ test.describe('Kanata Visualizer - Key Mapping Types', () => {
     // Save
     await page.click('#keyModal button:has-text("Save")');
 
-    // Verify the key shows the alias
-    const key = page.locator('.key:has(.key-label:text-is("i"))');
+    // Verify the key shows the alias in the base layer
+    const key = page.locator('.layer-section').filter({ hasText: /^base/ }).locator('.key:has(.key-label:text-is("i"))');
     await expect(key.locator('.key-action')).toContainText('@test');
   });
 
@@ -233,14 +226,10 @@ test.describe('Kanata Visualizer - Key Mapping Types', () => {
     await page.click('#layerModal button:has-text("Create")');
 
     // Verify layer tab appears
-    await expect(page.locator('.layer-tab:has-text("test-layer")')).toBeVisible();
+    await expect(page.locator('.layer-header').filter({ hasText: 'test-layer' })).toBeVisible();
 
-    // Switch to the new layer
-    await page.click('.layer-tab:has-text("test-layer")');
-    await expect(page.locator('.layer-tab.active')).toContainText('test-layer');
-
-    // All keys should be transparent by default
-    const keys = page.locator('.key.transparent');
+    // All keys in the test-layer should be transparent by default
+    const keys = page.locator('.layer-section').filter({ hasText: /^test-layer/ }).locator('.key.transparent');
     expect(await keys.count()).toBeGreaterThan(0);
   });
 
@@ -282,8 +271,9 @@ test.describe('Kanata Visualizer - Key Mapping Types', () => {
     const isoKeyCount = await page.locator('.key').count();
 
     // ISO layout differs from ANSI (has nubs and nuhs, but missing bsls in row 3)
-    // So it has 1 extra key overall
-    expect(isoKeyCount).toBe(ansiKeyCount + 1);
+    // So it has 1 extra key per layer. Since we have 2 layers (base and numbers), it's +2 total
+    const numLayers = await page.locator('.layer-section').count();
+    expect(isoKeyCount).toBe(ansiKeyCount + numLayers);
   });
 
   test('should validate config structure', async ({ page }) => {
@@ -333,7 +323,7 @@ test.describe('Kanata Visualizer - Config File Operations', () => {
   test('should show empty state when no config loaded', async ({ page }) => {
     // Verify empty state is visible
     await expect(page.locator('#emptyState')).toBeVisible();
-    await expect(page.locator('#keyboard')).not.toBeVisible();
+    await expect(page.locator('.keyboard')).not.toBeVisible();
 
     // Verify message
     await expect(page.locator('#emptyState')).toContainText('No Configuration Loaded');
@@ -350,7 +340,7 @@ test.describe('Kanata Visualizer - Config File Operations', () => {
     await expect(page.locator('#emptyState')).not.toBeVisible();
 
     // Keyboard should appear
-    await expect(page.locator('#keyboard')).toBeVisible();
+    await expect(page.locator('.keyboard').first()).toBeVisible();
 
     // Layers should appear
     await expect(page.locator('#layersContainer')).toBeVisible();
@@ -372,15 +362,13 @@ test.describe('Kanata Visualizer - Config File Operations', () => {
     await page.evaluate((configText) => {
       const config = parseConfig(configText);
       state.config = config;
-      state.ui.activeLayer = Object.keys(config.layers)[0];
-      renderLayers();
       renderKeyboard();
     }, customConfig);
 
     // Verify it loaded
-    await expect(page.locator('#keyboard')).toBeVisible();
-    // Use .first() to avoid strict mode violation with the "+ New Layer" tab
-    await expect(page.locator('.layer-tab').first()).toContainText('test');
+    await expect(page.locator('.keyboard').first()).toBeVisible();
+    // Check that the layer header contains 'test'
+    await expect(page.locator('.layer-header').first()).toContainText('test');
 
     // The keyboard layout still renders with the full keyboard layout,
     // but only the keys in defsrc will have mappings
