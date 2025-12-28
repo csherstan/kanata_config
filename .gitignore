@@ -1,6 +1,13 @@
 # Claude Code
 .claude/
 
+# Node.js
+node_modules/
+
+# Playwright
+playwright-report/
+test-results/
+
 # IDEs
 .vscode/
 .idea/

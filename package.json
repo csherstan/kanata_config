@@ -1,0 +1,30 @@
+{
+  "name": "kanata_config",
+  "version": "1.0.0",
+  "description": "This project will consist of a single html file (javascript embedded) that will act as a configuration visualizer for the kanata project. The document describing the configuration can be found here: https://github.com/jtroo/kanata/blob/v1.10.0/docs/config.adoc",
+  "main": "index.js",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "test:report": "playwright show-report"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/csherstan/kanata_config.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/csherstan/kanata_config/issues"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.57.0",
+    "@vitest/ui": "^4.0.16",
+    "happy-dom": "^20.0.11",
+    "jsdom": "^27.4.0",
+    "vitest": "^4.0.16"
+  }
+}
