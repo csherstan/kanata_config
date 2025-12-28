@@ -396,18 +396,7 @@
             <button class="btn btn-success" onclick="downloadConfig()">Download Config</button>
             <button class="btn btn-secondary" onclick="createSampleConfig()">Load Sample</button>
             <button class="btn btn-warning" onclick="openAliasesModal()">Manage Aliases</button>
-
-            <div class="layout-selector">
-                <span>Layout:</span>
-                <label>
-                    <input type="radio" name="layout" value="ansi" checked onchange="switchLayout('ansi')">
-                    ANSI
-                </label>
-                <label>
-                    <input type="radio" name="layout" value="iso" onchange="switchLayout('iso')">
-                    ISO
-                </label>
-            </div>
+            <button class="btn" onclick="openLayoutModal()">Edit Keyboard Layout</button>
         </div>
 
         <div class="keyboard-container">
@@ -499,206 +488,110 @@
         </div>
     </div>
 
+    <div id="layoutModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">Select Keyboard Layout</div>
+            <div class="info-box" style="margin: 0 0 20px 0;">
+                <h3>About Keyboard Layouts</h3>
+                <p>Select a preset keyboard layout that matches your physical keyboard. The layout defines which keys are available for remapping and how they're visually arranged.</p>
+            </div>
+            <div class="form-group">
+                <label>Keyboard Layout</label>
+                <select id="presetLayout">
+                    <option value="">-- Select your keyboard --</option>
+                    <option value="ansi-60">ANSI 60% (61 keys)</option>
+                    <option value="ansi-tkl">ANSI TKL (87 keys)</option>
+                    <option value="ansi-full">ANSI Full (104 keys)</option>
+                    <option value="iso-full">ISO Full (105 keys)</option>
+                    <option value="ergodox">ErgoDox</option>
+                    <option value="kinesis-freestyle">Kinesis Freestyle (Gaming)</option>
+                </select>
+            </div>
+            <div id="layoutPreview" style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 6px; min-height: 60px; color: #6c757d; text-align: center;">
+                Select a layout to see preview
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeLayoutModal()">Cancel</button>
+                <button class="btn" onclick="applySelectedLayout()">Apply Layout</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ==================== STATE MANAGEMENT ====================
         const state = {
             config: {
-                defsrc: [],
+                defsrc: [],      // Array of key codes in order
+                layoutData: {},  // Object mapping key code to {x: 0, y: 0, w: 1, h: 1}
                 layers: {},
                 aliases: {}
             },
             ui: {
                 activeLayer: 'base',
-                keyboardLayout: 'ansi',
                 editingKeyIndex: null,
                 editingAlias: null
             }
         };
 
-        // ==================== KEYBOARD LAYOUTS ====================
-        const KEYBOARD_LAYOUTS = {
-            ansi: {
-                rows: 6,
-                cols: 15,
-                keys: [
-                    // Row 1
-                    { code: 'esc', row: 1, col: 1, width: 1 },
-                    { code: 'f1', row: 1, col: 3, width: 1 },
-                    { code: 'f2', row: 1, col: 4, width: 1 },
-                    { code: 'f3', row: 1, col: 5, width: 1 },
-                    { code: 'f4', row: 1, col: 6, width: 1 },
-                    { code: 'f5', row: 1, col: 7, width: 1 },
-                    { code: 'f6', row: 1, col: 8, width: 1 },
-                    { code: 'f7', row: 1, col: 9, width: 1 },
-                    { code: 'f8', row: 1, col: 10, width: 1 },
-                    { code: 'f9', row: 1, col: 11, width: 1 },
-                    { code: 'f10', row: 1, col: 12, width: 1 },
-                    { code: 'f11', row: 1, col: 13, width: 1 },
-                    { code: 'f12', row: 1, col: 14, width: 1 },
-                    { code: 'prnt', row: 1, col: 15, width: 1 },
+        // Default key dimensions for common keys (in standard key units)
+        const DEFAULT_KEY_DIMENSIONS = {
+            // Standard modifier widths
+            'bspc': { w: 2, h: 1 },
+            'tab': { w: 1.5, h: 1 },
+            'caps': { w: 1.75, h: 1 },
+            'ret': { w: 2.25, h: 1 },
+            'lsft': { w: 2.25, h: 1 },
+            'rsft': { w: 2.75, h: 1 },
+            'lctl': { w: 1.25, h: 1 },
+            'lmet': { w: 1.25, h: 1 },
+            'lalt': { w: 1.25, h: 1 },
+            'spc': { w: 6.25, h: 1 },
+            'ralt': { w: 1.25, h: 1 },
+            'rmet': { w: 1.25, h: 1 },
+            'menu': { w: 1.25, h: 1 },
+            'rctl': { w: 1.25, h: 1 },
+            'bsls': { w: 1.5, h: 1 },  // ANSI backslash
 
-                    // Row 2
-                    { code: 'grv', row: 2, col: 1, width: 1 },
-                    { code: '1', row: 2, col: 2, width: 1 },
-                    { code: '2', row: 2, col: 3, width: 1 },
-                    { code: '3', row: 2, col: 4, width: 1 },
-                    { code: '4', row: 2, col: 5, width: 1 },
-                    { code: '5', row: 2, col: 6, width: 1 },
-                    { code: '6', row: 2, col: 7, width: 1 },
-                    { code: '7', row: 2, col: 8, width: 1 },
-                    { code: '8', row: 2, col: 9, width: 1 },
-                    { code: '9', row: 2, col: 10, width: 1 },
-                    { code: '0', row: 2, col: 11, width: 1 },
-                    { code: 'min', row: 2, col: 12, width: 1 },
-                    { code: 'eql', row: 2, col: 13, width: 1 },
-                    { code: 'bspc', row: 2, col: 14, width: 2 },
+            // ISO-specific
+            'nuhs': { w: 1.25, h: 1 },  // ISO hash/tilde key
+            'nubs': { w: 1.25, h: 1 },  // ISO key next to left shift
 
-                    // Row 3
-                    { code: 'tab', row: 3, col: 1, width: 1.5 },
-                    { code: 'q', row: 3, col: 2.5, width: 1 },
-                    { code: 'w', row: 3, col: 3.5, width: 1 },
-                    { code: 'e', row: 3, col: 4.5, width: 1 },
-                    { code: 'r', row: 3, col: 5.5, width: 1 },
-                    { code: 't', row: 3, col: 6.5, width: 1 },
-                    { code: 'y', row: 3, col: 7.5, width: 1 },
-                    { code: 'u', row: 3, col: 8.5, width: 1 },
-                    { code: 'i', row: 3, col: 9.5, width: 1 },
-                    { code: 'o', row: 3, col: 10.5, width: 1 },
-                    { code: 'p', row: 3, col: 11.5, width: 1 },
-                    { code: 'lbrc', row: 3, col: 12.5, width: 1 },
-                    { code: 'rbrc', row: 3, col: 13.5, width: 1 },
-                    { code: 'bsls', row: 3, col: 14.5, width: 1.5 },
+            // Numpad
+            'kprt': { w: 1, h: 2 },  // Numpad enter (height 2)
+            'kp+': { w: 1, h: 2 },   // Numpad plus (height 2 on some layouts)
+            'kp0': { w: 2, h: 1 },   // Numpad 0 (width 2)
+        };
 
-                    // Row 4
-                    { code: 'caps', row: 4, col: 1, width: 1.75 },
-                    { code: 'a', row: 4, col: 2.75, width: 1 },
-                    { code: 's', row: 4, col: 3.75, width: 1 },
-                    { code: 'd', row: 4, col: 4.75, width: 1 },
-                    { code: 'f', row: 4, col: 5.75, width: 1 },
-                    { code: 'g', row: 4, col: 6.75, width: 1 },
-                    { code: 'h', row: 4, col: 7.75, width: 1 },
-                    { code: 'j', row: 4, col: 8.75, width: 1 },
-                    { code: 'k', row: 4, col: 9.75, width: 1 },
-                    { code: 'l', row: 4, col: 10.75, width: 1 },
-                    { code: 'scln', row: 4, col: 11.75, width: 1 },
-                    { code: 'apo', row: 4, col: 12.75, width: 1 },
-                    { code: 'ret', row: 4, col: 13.75, width: 2.25 },
+        function getKeyDimensions(keyCode) {
+            return DEFAULT_KEY_DIMENSIONS[keyCode] || { w: 1, h: 1 };
+        }
 
-                    // Row 5
-                    { code: 'lsft', row: 5, col: 1, width: 2.25 },
-                    { code: 'z', row: 5, col: 3.25, width: 1 },
-                    { code: 'x', row: 5, col: 4.25, width: 1 },
-                    { code: 'c', row: 5, col: 5.25, width: 1 },
-                    { code: 'v', row: 5, col: 6.25, width: 1 },
-                    { code: 'b', row: 5, col: 7.25, width: 1 },
-                    { code: 'n', row: 5, col: 8.25, width: 1 },
-                    { code: 'm', row: 5, col: 9.25, width: 1 },
-                    { code: 'comm', row: 5, col: 10.25, width: 1 },
-                    { code: 'dot', row: 5, col: 11.25, width: 1 },
-                    { code: 'slsh', row: 5, col: 12.25, width: 1 },
-                    { code: 'rsft', row: 5, col: 13.25, width: 2.75 },
-
-                    // Row 6
-                    { code: 'lctl', row: 6, col: 1, width: 1.25 },
-                    { code: 'lmet', row: 6, col: 2.25, width: 1.25 },
-                    { code: 'lalt', row: 6, col: 3.5, width: 1.25 },
-                    { code: 'spc', row: 6, col: 4.75, width: 6.25 },
-                    { code: 'ralt', row: 6, col: 11, width: 1.25 },
-                    { code: 'rmet', row: 6, col: 12.25, width: 1.25 },
-                    { code: 'rctl', row: 6, col: 13.5, width: 1.25 },
-                ]
+        //  ==================== PRECISE LAYOUT DEFINITIONS ====================
+        // These layouts have exact key positions for proper keyboard visualization
+        const PRECISE_LAYOUTS = {
+            'ansi-60': {
+                defsrc: ['grv', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', 'bspc', 'tab', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\\', 'caps', 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\'', 'ret', 'lsft', 'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/', 'rsft', 'lctl', 'lmet', 'lalt', 'spc', 'ralt', 'rmet', 'menu', 'rctl'],
+                layoutData: {'grv': {x: 0, y: 0, w: 1, h: 1}, '1': {x: 1, y: 0, w: 1, h: 1}, '2': {x: 2, y: 0, w: 1, h: 1}, '3': {x: 3, y: 0, w: 1, h: 1}, '4': {x: 4, y: 0, w: 1, h: 1}, '5': {x: 5, y: 0, w: 1, h: 1}, '6': {x: 6, y: 0, w: 1, h: 1}, '7': {x: 7, y: 0, w: 1, h: 1}, '8': {x: 8, y: 0, w: 1, h: 1}, '9': {x: 9, y: 0, w: 1, h: 1}, '0': {x: 10, y: 0, w: 1, h: 1}, '-': {x: 11, y: 0, w: 1, h: 1}, '=': {x: 12, y: 0, w: 1, h: 1}, 'bspc': {x: 13, y: 0, w: 2, h: 1}, 'tab': {x: 0, y: 1, w: 1.5, h: 1}, 'q': {x: 1.5, y: 1, w: 1, h: 1}, 'w': {x: 2.5, y: 1, w: 1, h: 1}, 'e': {x: 3.5, y: 1, w: 1, h: 1}, 'r': {x: 4.5, y: 1, w: 1, h: 1}, 't': {x: 5.5, y: 1, w: 1, h: 1}, 'y': {x: 6.5, y: 1, w: 1, h: 1}, 'u': {x: 7.5, y: 1, w: 1, h: 1}, 'i': {x: 8.5, y: 1, w: 1, h: 1}, 'o': {x: 9.5, y: 1, w: 1, h: 1}, 'p': {x: 10.5, y: 1, w: 1, h: 1}, '[': {x: 11.5, y: 1, w: 1, h: 1}, ']': {x: 12.5, y: 1, w: 1, h: 1}, '\\': {x: 13.5, y: 1, w: 1.5, h: 1}, 'caps': {x: 0, y: 2, w: 1.75, h: 1}, 'a': {x: 1.75, y: 2, w: 1, h: 1}, 's': {x: 2.75, y: 2, w: 1, h: 1}, 'd': {x: 3.75, y: 2, w: 1, h: 1}, 'f': {x: 4.75, y: 2, w: 1, h: 1}, 'g': {x: 5.75, y: 2, w: 1, h: 1}, 'h': {x: 6.75, y: 2, w: 1, h: 1}, 'j': {x: 7.75, y: 2, w: 1, h: 1}, 'k': {x: 8.75, y: 2, w: 1, h: 1}, 'l': {x: 9.75, y: 2, w: 1, h: 1}, ';': {x: 10.75, y: 2, w: 1, h: 1}, '\'': {x: 11.75, y: 2, w: 1, h: 1}, 'ret': {x: 12.75, y: 2, w: 2.25, h: 1}, 'lsft': {x: 0, y: 3, w: 2.25, h: 1}, 'z': {x: 2.25, y: 3, w: 1, h: 1}, 'x': {x: 3.25, y: 3, w: 1, h: 1}, 'c': {x: 4.25, y: 3, w: 1, h: 1}, 'v': {x: 5.25, y: 3, w: 1, h: 1}, 'b': {x: 6.25, y: 3, w: 1, h: 1}, 'n': {x: 7.25, y: 3, w: 1, h: 1}, 'm': {x: 8.25, y: 3, w: 1, h: 1}, ',': {x: 9.25, y: 3, w: 1, h: 1}, '.': {x: 10.25, y: 3, w: 1, h: 1}, '/': {x: 11.25, y: 3, w: 1, h: 1}, 'rsft': {x: 12.25, y: 3, w: 2.75, h: 1}, 'lctl': {x: 0, y: 4, w: 1.25, h: 1}, 'lmet': {x: 1.25, y: 4, w: 1.25, h: 1}, 'lalt': {x: 2.5, y: 4, w: 1.25, h: 1}, 'spc': {x: 3.75, y: 4, w: 6.25, h: 1}, 'ralt': {x: 10, y: 4, w: 1.25, h: 1}, 'rmet': {x: 11.25, y: 4, w: 1.25, h: 1}, 'menu': {x: 12.5, y: 4, w: 1.25, h: 1}, 'rctl': {x: 13.75, y: 4, w: 1.25, h: 1}}
             },
-            iso: {
-                rows: 6,
-                cols: 15,
-                keys: [
-                    // Row 1 (same as ANSI)
-                    { code: 'esc', row: 1, col: 1, width: 1 },
-                    { code: 'f1', row: 1, col: 3, width: 1 },
-                    { code: 'f2', row: 1, col: 4, width: 1 },
-                    { code: 'f3', row: 1, col: 5, width: 1 },
-                    { code: 'f4', row: 1, col: 6, width: 1 },
-                    { code: 'f5', row: 1, col: 7, width: 1 },
-                    { code: 'f6', row: 1, col: 8, width: 1 },
-                    { code: 'f7', row: 1, col: 9, width: 1 },
-                    { code: 'f8', row: 1, col: 10, width: 1 },
-                    { code: 'f9', row: 1, col: 11, width: 1 },
-                    { code: 'f10', row: 1, col: 12, width: 1 },
-                    { code: 'f11', row: 1, col: 13, width: 1 },
-                    { code: 'f12', row: 1, col: 14, width: 1 },
-                    { code: 'prnt', row: 1, col: 15, width: 1 },
-
-                    // Row 2 (same as ANSI)
-                    { code: 'grv', row: 2, col: 1, width: 1 },
-                    { code: '1', row: 2, col: 2, width: 1 },
-                    { code: '2', row: 2, col: 3, width: 1 },
-                    { code: '3', row: 2, col: 4, width: 1 },
-                    { code: '4', row: 2, col: 5, width: 1 },
-                    { code: '5', row: 2, col: 6, width: 1 },
-                    { code: '6', row: 2, col: 7, width: 1 },
-                    { code: '7', row: 2, col: 8, width: 1 },
-                    { code: '8', row: 2, col: 9, width: 1 },
-                    { code: '9', row: 2, col: 10, width: 1 },
-                    { code: '0', row: 2, col: 11, width: 1 },
-                    { code: 'min', row: 2, col: 12, width: 1 },
-                    { code: 'eql', row: 2, col: 13, width: 1 },
-                    { code: 'bspc', row: 2, col: 14, width: 2 },
-
-                    // Row 3 (ISO has different backslash position)
-                    { code: 'tab', row: 3, col: 1, width: 1.5 },
-                    { code: 'q', row: 3, col: 2.5, width: 1 },
-                    { code: 'w', row: 3, col: 3.5, width: 1 },
-                    { code: 'e', row: 3, col: 4.5, width: 1 },
-                    { code: 'r', row: 3, col: 5.5, width: 1 },
-                    { code: 't', row: 3, col: 6.5, width: 1 },
-                    { code: 'y', row: 3, col: 7.5, width: 1 },
-                    { code: 'u', row: 3, col: 8.5, width: 1 },
-                    { code: 'i', row: 3, col: 9.5, width: 1 },
-                    { code: 'o', row: 3, col: 10.5, width: 1 },
-                    { code: 'p', row: 3, col: 11.5, width: 1 },
-                    { code: 'lbrc', row: 3, col: 12.5, width: 1 },
-                    { code: 'rbrc', row: 3, col: 13.5, width: 1 },
-
-                    // Row 4 (ISO has shorter Enter and additional key)
-                    { code: 'caps', row: 4, col: 1, width: 1.75 },
-                    { code: 'a', row: 4, col: 2.75, width: 1 },
-                    { code: 's', row: 4, col: 3.75, width: 1 },
-                    { code: 'd', row: 4, col: 4.75, width: 1 },
-                    { code: 'f', row: 4, col: 5.75, width: 1 },
-                    { code: 'g', row: 4, col: 6.75, width: 1 },
-                    { code: 'h', row: 4, col: 7.75, width: 1 },
-                    { code: 'j', row: 4, col: 8.75, width: 1 },
-                    { code: 'k', row: 4, col: 9.75, width: 1 },
-                    { code: 'l', row: 4, col: 10.75, width: 1 },
-                    { code: 'scln', row: 4, col: 11.75, width: 1 },
-                    { code: 'apo', row: 4, col: 12.75, width: 1 },
-                    { code: 'nuhs', row: 4, col: 13.75, width: 1 },
-                    { code: 'ret', row: 4, col: 14.75, width: 1.25 },
-
-                    // Row 5 (ISO has additional key)
-                    { code: 'lsft', row: 5, col: 1, width: 1.25 },
-                    { code: 'nubs', row: 5, col: 2.25, width: 1 },
-                    { code: 'z', row: 5, col: 3.25, width: 1 },
-                    { code: 'x', row: 5, col: 4.25, width: 1 },
-                    { code: 'c', row: 5, col: 5.25, width: 1 },
-                    { code: 'v', row: 5, col: 6.25, width: 1 },
-                    { code: 'b', row: 5, col: 7.25, width: 1 },
-                    { code: 'n', row: 5, col: 8.25, width: 1 },
-                    { code: 'm', row: 5, col: 9.25, width: 1 },
-                    { code: 'comm', row: 5, col: 10.25, width: 1 },
-                    { code: 'dot', row: 5, col: 11.25, width: 1 },
-                    { code: 'slsh', row: 5, col: 12.25, width: 1 },
-                    { code: 'rsft', row: 5, col: 13.25, width: 2.75 },
-
-                    // Row 6 (same as ANSI)
-                    { code: 'lctl', row: 6, col: 1, width: 1.25 },
-                    { code: 'lmet', row: 6, col: 2.25, width: 1.25 },
-                    { code: 'lalt', row: 6, col: 3.5, width: 1.25 },
-                    { code: 'spc', row: 6, col: 4.75, width: 6.25 },
-                    { code: 'ralt', row: 6, col: 11, width: 1.25 },
-                    { code: 'rmet', row: 6, col: 12.25, width: 1.25 },
-                    { code: 'rctl', row: 6, col: 13.5, width: 1.25 },
-                ]
+            'ansi-tkl': {
+                defsrc: ['esc', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12', 'prnt', 'slck', 'paus', 'grv', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', 'bspc', 'ins', 'home', 'pgup', 'tab', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\\', 'del', 'end', 'pgdn', 'caps', 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\'', 'ret', 'lsft', 'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/', 'rsft', 'up', 'lctl', 'lmet', 'lalt', 'spc', 'ralt', 'rmet', 'menu', 'rctl', 'left', 'down', 'rght'],
+                layoutData: {'esc': {x: 0, y: 0, w: 1, h: 1}, 'f1': {x: 2, y: 0, w: 1, h: 1}, 'f2': {x: 3, y: 0, w: 1, h: 1}, 'f3': {x: 4, y: 0, w: 1, h: 1}, 'f4': {x: 5, y: 0, w: 1, h: 1}, 'f5': {x: 6.5, y: 0, w: 1, h: 1}, 'f6': {x: 7.5, y: 0, w: 1, h: 1}, 'f7': {x: 8.5, y: 0, w: 1, h: 1}, 'f8': {x: 9.5, y: 0, w: 1, h: 1}, 'f9': {x: 11, y: 0, w: 1, h: 1}, 'f10': {x: 12, y: 0, w: 1, h: 1}, 'f11': {x: 13, y: 0, w: 1, h: 1}, 'f12': {x: 14, y: 0, w: 1, h: 1}, 'prnt': {x: 15.25, y: 0, w: 1, h: 1}, 'slck': {x: 16.25, y: 0, w: 1, h: 1}, 'paus': {x: 17.25, y: 0, w: 1, h: 1}, 'grv': {x: 0, y: 1.5, w: 1, h: 1}, '1': {x: 1, y: 1.5, w: 1, h: 1}, '2': {x: 2, y: 1.5, w: 1, h: 1}, '3': {x: 3, y: 1.5, w: 1, h: 1}, '4': {x: 4, y: 1.5, w: 1, h: 1}, '5': {x: 5, y: 1.5, w: 1, h: 1}, '6': {x: 6, y: 1.5, w: 1, h: 1}, '7': {x: 7, y: 1.5, w: 1, h: 1}, '8': {x: 8, y: 1.5, w: 1, h: 1}, '9': {x: 9, y: 1.5, w: 1, h: 1}, '0': {x: 10, y: 1.5, w: 1, h: 1}, '-': {x: 11, y: 1.5, w: 1, h: 1}, '=': {x: 12, y: 1.5, w: 1, h: 1}, 'bspc': {x: 13, y: 1.5, w: 2, h: 1}, 'ins': {x: 15.25, y: 1.5, w: 1, h: 1}, 'home': {x: 16.25, y: 1.5, w: 1, h: 1}, 'pgup': {x: 17.25, y: 1.5, w: 1, h: 1}, 'tab': {x: 0, y: 2.5, w: 1.5, h: 1}, 'q': {x: 1.5, y: 2.5, w: 1, h: 1}, 'w': {x: 2.5, y: 2.5, w: 1, h: 1}, 'e': {x: 3.5, y: 2.5, w: 1, h: 1}, 'r': {x: 4.5, y: 2.5, w: 1, h: 1}, 't': {x: 5.5, y: 2.5, w: 1, h: 1}, 'y': {x: 6.5, y: 2.5, w: 1, h: 1}, 'u': {x: 7.5, y: 2.5, w: 1, h: 1}, 'i': {x: 8.5, y: 2.5, w: 1, h: 1}, 'o': {x: 9.5, y: 2.5, w: 1, h: 1}, 'p': {x: 10.5, y: 2.5, w: 1, h: 1}, '[': {x: 11.5, y: 2.5, w: 1, h: 1}, ']': {x: 12.5, y: 2.5, w: 1, h: 1}, '\\': {x: 13.5, y: 2.5, w: 1.5, h: 1}, 'del': {x: 15.25, y: 2.5, w: 1, h: 1}, 'end': {x: 16.25, y: 2.5, w: 1, h: 1}, 'pgdn': {x: 17.25, y: 2.5, w: 1, h: 1}, 'caps': {x: 0, y: 3.5, w: 1.75, h: 1}, 'a': {x: 1.75, y: 3.5, w: 1, h: 1}, 's': {x: 2.75, y: 3.5, w: 1, h: 1}, 'd': {x: 3.75, y: 3.5, w: 1, h: 1}, 'f': {x: 4.75, y: 3.5, w: 1, h: 1}, 'g': {x: 5.75, y: 3.5, w: 1, h: 1}, 'h': {x: 6.75, y: 3.5, w: 1, h: 1}, 'j': {x: 7.75, y: 3.5, w: 1, h: 1}, 'k': {x: 8.75, y: 3.5, w: 1, h: 1}, 'l': {x: 9.75, y: 3.5, w: 1, h: 1}, ';': {x: 10.75, y: 3.5, w: 1, h: 1}, '\'': {x: 11.75, y: 3.5, w: 1, h: 1}, 'ret': {x: 12.75, y: 3.5, w: 2.25, h: 1}, 'lsft': {x: 0, y: 4.5, w: 2.25, h: 1}, 'z': {x: 2.25, y: 4.5, w: 1, h: 1}, 'x': {x: 3.25, y: 4.5, w: 1, h: 1}, 'c': {x: 4.25, y: 4.5, w: 1, h: 1}, 'v': {x: 5.25, y: 4.5, w: 1, h: 1}, 'b': {x: 6.25, y: 4.5, w: 1, h: 1}, 'n': {x: 7.25, y: 4.5, w: 1, h: 1}, 'm': {x: 8.25, y: 4.5, w: 1, h: 1}, ',': {x: 9.25, y: 4.5, w: 1, h: 1}, '.': {x: 10.25, y: 4.5, w: 1, h: 1}, '/': {x: 11.25, y: 4.5, w: 1, h: 1}, 'rsft': {x: 12.25, y: 4.5, w: 2.75, h: 1}, 'up': {x: 16.25, y: 4.5, w: 1, h: 1}, 'lctl': {x: 0, y: 5.5, w: 1.25, h: 1}, 'lmet': {x: 1.25, y: 5.5, w: 1.25, h: 1}, 'lalt': {x: 2.5, y: 5.5, w: 1.25, h: 1}, 'spc': {x: 3.75, y: 5.5, w: 6.25, h: 1}, 'ralt': {x: 10, y: 5.5, w: 1.25, h: 1}, 'rmet': {x: 11.25, y: 5.5, w: 1.25, h: 1}, 'menu': {x: 12.5, y: 5.5, w: 1.25, h: 1}, 'rctl': {x: 13.75, y: 5.5, w: 1.25, h: 1}, 'left': {x: 15.25, y: 5.5, w: 1, h: 1}, 'down': {x: 16.25, y: 5.5, w: 1, h: 1}, 'rght': {x: 17.25, y: 5.5, w: 1, h: 1}}
+            },
+            'ansi-full': {
+                defsrc: ['esc', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12', 'prnt', 'slck', 'paus', 'grv', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', 'bspc', 'ins', 'home', 'pgup', 'nlck', 'kp/', 'kp*', 'kp-', 'tab', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\\', 'del', 'end', 'pgdn', 'kp7', 'kp8', 'kp9', 'kp+', 'caps', 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\'', 'ret', 'kp4', 'kp5', 'kp6', 'lsft', 'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/', 'rsft', 'up', 'kp1', 'kp2', 'kp3', 'kprt', 'lctl', 'lmet', 'lalt', 'spc', 'ralt', 'rmet', 'menu', 'rctl', 'left', 'down', 'rght', 'kp0', 'kp.'],
+                layoutData: {'esc': {x: 0, y: 0, w: 1, h: 1}, 'f1': {x: 2, y: 0, w: 1, h: 1}, 'f2': {x: 3, y: 0, w: 1, h: 1}, 'f3': {x: 4, y: 0, w: 1, h: 1}, 'f4': {x: 5, y: 0, w: 1, h: 1}, 'f5': {x: 6.5, y: 0, w: 1, h: 1}, 'f6': {x: 7.5, y: 0, w: 1, h: 1}, 'f7': {x: 8.5, y: 0, w: 1, h: 1}, 'f8': {x: 9.5, y: 0, w: 1, h: 1}, 'f9': {x: 11, y: 0, w: 1, h: 1}, 'f10': {x: 12, y: 0, w: 1, h: 1}, 'f11': {x: 13, y: 0, w: 1, h: 1}, 'f12': {x: 14, y: 0, w: 1, h: 1}, 'prnt': {x: 15.25, y: 0, w: 1, h: 1}, 'slck': {x: 16.25, y: 0, w: 1, h: 1}, 'paus': {x: 17.25, y: 0, w: 1, h: 1}, 'grv': {x: 0, y: 1.5, w: 1, h: 1}, '1': {x: 1, y: 1.5, w: 1, h: 1}, '2': {x: 2, y: 1.5, w: 1, h: 1}, '3': {x: 3, y: 1.5, w: 1, h: 1}, '4': {x: 4, y: 1.5, w: 1, h: 1}, '5': {x: 5, y: 1.5, w: 1, h: 1}, '6': {x: 6, y: 1.5, w: 1, h: 1}, '7': {x: 7, y: 1.5, w: 1, h: 1}, '8': {x: 8, y: 1.5, w: 1, h: 1}, '9': {x: 9, y: 1.5, w: 1, h: 1}, '0': {x: 10, y: 1.5, w: 1, h: 1}, '-': {x: 11, y: 1.5, w: 1, h: 1}, '=': {x: 12, y: 1.5, w: 1, h: 1}, 'bspc': {x: 13, y: 1.5, w: 2, h: 1}, 'ins': {x: 15.25, y: 1.5, w: 1, h: 1}, 'home': {x: 16.25, y: 1.5, w: 1, h: 1}, 'pgup': {x: 17.25, y: 1.5, w: 1, h: 1}, 'nlck': {x: 18.5, y: 1.5, w: 1, h: 1}, 'kp/': {x: 19.5, y: 1.5, w: 1, h: 1}, 'kp*': {x: 20.5, y: 1.5, w: 1, h: 1}, 'kp-': {x: 21.5, y: 1.5, w: 1, h: 1}, 'tab': {x: 0, y: 2.5, w: 1.5, h: 1}, 'q': {x: 1.5, y: 2.5, w: 1, h: 1}, 'w': {x: 2.5, y: 2.5, w: 1, h: 1}, 'e': {x: 3.5, y: 2.5, w: 1, h: 1}, 'r': {x: 4.5, y: 2.5, w: 1, h: 1}, 't': {x: 5.5, y: 2.5, w: 1, h: 1}, 'y': {x: 6.5, y: 2.5, w: 1, h: 1}, 'u': {x: 7.5, y: 2.5, w: 1, h: 1}, 'i': {x: 8.5, y: 2.5, w: 1, h: 1}, 'o': {x: 9.5, y: 2.5, w: 1, h: 1}, 'p': {x: 10.5, y: 2.5, w: 1, h: 1}, '[': {x: 11.5, y: 2.5, w: 1, h: 1}, ']': {x: 12.5, y: 2.5, w: 1, h: 1}, '\\': {x: 13.5, y: 2.5, w: 1.5, h: 1}, 'del': {x: 15.25, y: 2.5, w: 1, h: 1}, 'end': {x: 16.25, y: 2.5, w: 1, h: 1}, 'pgdn': {x: 17.25, y: 2.5, w: 1, h: 1}, 'kp7': {x: 18.5, y: 2.5, w: 1, h: 1}, 'kp8': {x: 19.5, y: 2.5, w: 1, h: 1}, 'kp9': {x: 20.5, y: 2.5, w: 1, h: 1}, 'kp+': {x: 21.5, y: 2.5, w: 1, h: 2}, 'caps': {x: 0, y: 3.5, w: 1.75, h: 1}, 'a': {x: 1.75, y: 3.5, w: 1, h: 1}, 's': {x: 2.75, y: 3.5, w: 1, h: 1}, 'd': {x: 3.75, y: 3.5, w: 1, h: 1}, 'f': {x: 4.75, y: 3.5, w: 1, h: 1}, 'g': {x: 5.75, y: 3.5, w: 1, h: 1}, 'h': {x: 6.75, y: 3.5, w: 1, h: 1}, 'j': {x: 7.75, y: 3.5, w: 1, h: 1}, 'k': {x: 8.75, y: 3.5, w: 1, h: 1}, 'l': {x: 9.75, y: 3.5, w: 1, h: 1}, ';': {x: 10.75, y: 3.5, w: 1, h: 1}, '\'': {x: 11.75, y: 3.5, w: 1, h: 1}, 'ret': {x: 12.75, y: 3.5, w: 2.25, h: 1}, 'kp4': {x: 18.5, y: 3.5, w: 1, h: 1}, 'kp5': {x: 19.5, y: 3.5, w: 1, h: 1}, 'kp6': {x: 20.5, y: 3.5, w: 1, h: 1}, 'lsft': {x: 0, y: 4.5, w: 2.25, h: 1}, 'z': {x: 2.25, y: 4.5, w: 1, h: 1}, 'x': {x: 3.25, y: 4.5, w: 1, h: 1}, 'c': {x: 4.25, y: 4.5, w: 1, h: 1}, 'v': {x: 5.25, y: 4.5, w: 1, h: 1}, 'b': {x: 6.25, y: 4.5, w: 1, h: 1}, 'n': {x: 7.25, y: 4.5, w: 1, h: 1}, 'm': {x: 8.25, y: 4.5, w: 1, h: 1}, ',': {x: 9.25, y: 4.5, w: 1, h: 1}, '.': {x: 10.25, y: 4.5, w: 1, h: 1}, '/': {x: 11.25, y: 4.5, w: 1, h: 1}, 'rsft': {x: 12.25, y: 4.5, w: 2.75, h: 1}, 'up': {x: 16.25, y: 4.5, w: 1, h: 1}, 'kp1': {x: 18.5, y: 4.5, w: 1, h: 1}, 'kp2': {x: 19.5, y: 4.5, w: 1, h: 1}, 'kp3': {x: 20.5, y: 4.5, w: 1, h: 1}, 'kprt': {x: 21.5, y: 4.5, w: 1, h: 2}, 'lctl': {x: 0, y: 5.5, w: 1.25, h: 1}, 'lmet': {x: 1.25, y: 5.5, w: 1.25, h: 1}, 'lalt': {x: 2.5, y: 5.5, w: 1.25, h: 1}, 'spc': {x: 3.75, y: 5.5, w: 6.25, h: 1}, 'ralt': {x: 10, y: 5.5, w: 1.25, h: 1}, 'rmet': {x: 11.25, y: 5.5, w: 1.25, h: 1}, 'menu': {x: 12.5, y: 5.5, w: 1.25, h: 1}, 'rctl': {x: 13.75, y: 5.5, w: 1.25, h: 1}, 'left': {x: 15.25, y: 5.5, w: 1, h: 1}, 'down': {x: 16.25, y: 5.5, w: 1, h: 1}, 'rght': {x: 17.25, y: 5.5, w: 1, h: 1}, 'kp0': {x: 18.5, y: 5.5, w: 2, h: 1}, 'kp.': {x: 20.5, y: 5.5, w: 1, h: 1}}
+            },
+            'iso-full': {
+                defsrc: ['esc', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12', 'prnt', 'slck', 'paus', 'grv', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', 'bspc', 'ins', 'home', 'pgup', 'nlck', 'kp/', 'kp*', 'kp-', 'tab', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']', 'del', 'end', 'pgdn', 'kp7', 'kp8', 'kp9', 'kp+', 'caps', 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\'', 'nuhs', 'ret', 'kp4', 'kp5', 'kp6', 'lsft', 'nubs', 'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/', 'rsft', 'up', 'kp1', 'kp2', 'kp3', 'kprt', 'lctl', 'lmet', 'lalt', 'spc', 'ralt', 'rmet', 'menu', 'rctl', 'left', 'down', 'rght', 'kp0', 'kp.'],
+                layoutData: {'esc': {x: 0, y: 0, w: 1, h: 1}, 'f1': {x: 2, y: 0, w: 1, h: 1}, 'f2': {x: 3, y: 0, w: 1, h: 1}, 'f3': {x: 4, y: 0, w: 1, h: 1}, 'f4': {x: 5, y: 0, w: 1, h: 1}, 'f5': {x: 6.5, y: 0, w: 1, h: 1}, 'f6': {x: 7.5, y: 0, w: 1, h: 1}, 'f7': {x: 8.5, y: 0, w: 1, h: 1}, 'f8': {x: 9.5, y: 0, w: 1, h: 1}, 'f9': {x: 11, y: 0, w: 1, h: 1}, 'f10': {x: 12, y: 0, w: 1, h: 1}, 'f11': {x: 13, y: 0, w: 1, h: 1}, 'f12': {x: 14, y: 0, w: 1, h: 1}, 'prnt': {x: 15.25, y: 0, w: 1, h: 1}, 'slck': {x: 16.25, y: 0, w: 1, h: 1}, 'paus': {x: 17.25, y: 0, w: 1, h: 1}, 'grv': {x: 0, y: 1.5, w: 1, h: 1}, '1': {x: 1, y: 1.5, w: 1, h: 1}, '2': {x: 2, y: 1.5, w: 1, h: 1}, '3': {x: 3, y: 1.5, w: 1, h: 1}, '4': {x: 4, y: 1.5, w: 1, h: 1}, '5': {x: 5, y: 1.5, w: 1, h: 1}, '6': {x: 6, y: 1.5, w: 1, h: 1}, '7': {x: 7, y: 1.5, w: 1, h: 1}, '8': {x: 8, y: 1.5, w: 1, h: 1}, '9': {x: 9, y: 1.5, w: 1, h: 1}, '0': {x: 10, y: 1.5, w: 1, h: 1}, '-': {x: 11, y: 1.5, w: 1, h: 1}, '=': {x: 12, y: 1.5, w: 1, h: 1}, 'bspc': {x: 13, y: 1.5, w: 2, h: 1}, 'ins': {x: 15.25, y: 1.5, w: 1, h: 1}, 'home': {x: 16.25, y: 1.5, w: 1, h: 1}, 'pgup': {x: 17.25, y: 1.5, w: 1, h: 1}, 'nlck': {x: 18.5, y: 1.5, w: 1, h: 1}, 'kp/': {x: 19.5, y: 1.5, w: 1, h: 1}, 'kp*': {x: 20.5, y: 1.5, w: 1, h: 1}, 'kp-': {x: 21.5, y: 1.5, w: 1, h: 1}, 'tab': {x: 0, y: 2.5, w: 1.5, h: 1}, 'q': {x: 1.5, y: 2.5, w: 1, h: 1}, 'w': {x: 2.5, y: 2.5, w: 1, h: 1}, 'e': {x: 3.5, y: 2.5, w: 1, h: 1}, 'r': {x: 4.5, y: 2.5, w: 1, h: 1}, 't': {x: 5.5, y: 2.5, w: 1, h: 1}, 'y': {x: 6.5, y: 2.5, w: 1, h: 1}, 'u': {x: 7.5, y: 2.5, w: 1, h: 1}, 'i': {x: 8.5, y: 2.5, w: 1, h: 1}, 'o': {x: 9.5, y: 2.5, w: 1, h: 1}, 'p': {x: 10.5, y: 2.5, w: 1, h: 1}, '[': {x: 11.5, y: 2.5, w: 1, h: 1}, ']': {x: 12.5, y: 2.5, w: 1, h: 1}, 'del': {x: 15.25, y: 2.5, w: 1, h: 1}, 'end': {x: 16.25, y: 2.5, w: 1, h: 1}, 'pgdn': {x: 17.25, y: 2.5, w: 1, h: 1}, 'kp7': {x: 18.5, y: 2.5, w: 1, h: 1}, 'kp8': {x: 19.5, y: 2.5, w: 1, h: 1}, 'kp9': {x: 20.5, y: 2.5, w: 1, h: 1}, 'kp+': {x: 21.5, y: 2.5, w: 1, h: 2}, 'caps': {x: 0, y: 3.5, w: 1.75, h: 1}, 'a': {x: 1.75, y: 3.5, w: 1, h: 1}, 's': {x: 2.75, y: 3.5, w: 1, h: 1}, 'd': {x: 3.75, y: 3.5, w: 1, h: 1}, 'f': {x: 4.75, y: 3.5, w: 1, h: 1}, 'g': {x: 5.75, y: 3.5, w: 1, h: 1}, 'h': {x: 6.75, y: 3.5, w: 1, h: 1}, 'j': {x: 7.75, y: 3.5, w: 1, h: 1}, 'k': {x: 8.75, y: 3.5, w: 1, h: 1}, 'l': {x: 9.75, y: 3.5, w: 1, h: 1}, ';': {x: 10.75, y: 3.5, w: 1, h: 1}, '\'': {x: 11.75, y: 3.5, w: 1, h: 1}, 'nuhs': {x: 12.75, y: 3.5, w: 1, h: 1}, 'ret': {x: 13.75, y: 2.5, w: 1.25, h: 2}, 'kp4': {x: 18.5, y: 3.5, w: 1, h: 1}, 'kp5': {x: 19.5, y: 3.5, w: 1, h: 1}, 'kp6': {x: 20.5, y: 3.5, w: 1, h: 1}, 'lsft': {x: 0, y: 4.5, w: 1.25, h: 1}, 'nubs': {x: 1.25, y: 4.5, w: 1, h: 1}, 'z': {x: 2.25, y: 4.5, w: 1, h: 1}, 'x': {x: 3.25, y: 4.5, w: 1, h: 1}, 'c': {x: 4.25, y: 4.5, w: 1, h: 1}, 'v': {x: 5.25, y: 4.5, w: 1, h: 1}, 'b': {x: 6.25, y: 4.5, w: 1, h: 1}, 'n': {x: 7.25, y: 4.5, w: 1, h: 1}, 'm': {x: 8.25, y: 4.5, w: 1, h: 1}, ',': {x: 9.25, y: 4.5, w: 1, h: 1}, '.': {x: 10.25, y: 4.5, w: 1, h: 1}, '/': {x: 11.25, y: 4.5, w: 1, h: 1}, 'rsft': {x: 12.25, y: 4.5, w: 2.75, h: 1}, 'up': {x: 16.25, y: 4.5, w: 1, h: 1}, 'kp1': {x: 18.5, y: 4.5, w: 1, h: 1}, 'kp2': {x: 19.5, y: 4.5, w: 1, h: 1}, 'kp3': {x: 20.5, y: 4.5, w: 1, h: 1}, 'kprt': {x: 21.5, y: 4.5, w: 1, h: 2}, 'lctl': {x: 0, y: 5.5, w: 1.25, h: 1}, 'lmet': {x: 1.25, y: 5.5, w: 1.25, h: 1}, 'lalt': {x: 2.5, y: 5.5, w: 1.25, h: 1}, 'spc': {x: 3.75, y: 5.5, w: 6.25, h: 1}, 'ralt': {x: 10, y: 5.5, w: 1.25, h: 1}, 'rmet': {x: 11.25, y: 5.5, w: 1.25, h: 1}, 'menu': {x: 12.5, y: 5.5, w: 1.25, h: 1}, 'rctl': {x: 13.75, y: 5.5, w: 1.25, h: 1}, 'left': {x: 15.25, y: 5.5, w: 1, h: 1}, 'down': {x: 16.25, y: 5.5, w: 1, h: 1}, 'rght': {x: 17.25, y: 5.5, w: 1, h: 1}, 'kp0': {x: 18.5, y: 5.5, w: 2, h: 1}, 'kp.': {x: 20.5, y: 5.5, w: 1, h: 1}}
+            },
+            'ergodox': {
+                defsrc: ['esc', '1', '2', '3', '4', '5', 'f11', 'tab', 'q', 'w', 'e', 'r', 't', 'lbrc', 'caps', 'a', 's', 'd', 'f', 'g', 'lsft', 'z', 'x', 'c', 'v', 'b', 'home', 'grv', 'min', 'left', 'rght', 'lctl', 'lalt', 'bspc', 'del', 'spc', 'f12', '6', '7', '8', '9', '0', 'bspc', 'rbrc', 'y', 'u', 'i', 'o', 'p', 'bsls', 'h', 'j', 'k', 'l', 'scln', 'apo', 'end', 'n', 'm', 'comm', 'dot', 'slsh', 'rsft', 'lmet', 'pgup', 'pgdn', 'rmet', 'ralt', 'up', 'down', 'eql', 'ret'],
+                layoutData: {'esc': {x: 0, y: 0, w: 1, h: 1}, '1': {x: 1, y: 0, w: 1, h: 1}, '2': {x: 2, y: 0, w: 1, h: 1}, '3': {x: 3, y: 0, w: 1, h: 1}, '4': {x: 4, y: 0, w: 1, h: 1}, '5': {x: 5, y: 0, w: 1, h: 1}, 'f11': {x: 6, y: 0, w: 1, h: 1}, 'tab': {x: 0, y: 1, w: 1, h: 1}, 'q': {x: 1, y: 1, w: 1, h: 1}, 'w': {x: 2, y: 1, w: 1, h: 1}, 'e': {x: 3, y: 1, w: 1, h: 1}, 'r': {x: 4, y: 1, w: 1, h: 1}, 't': {x: 5, y: 1, w: 1, h: 1}, 'lbrc': {x: 6, y: 1, w: 1, h: 1}, 'caps': {x: 0, y: 2, w: 1, h: 1}, 'a': {x: 1, y: 2, w: 1, h: 1}, 's': {x: 2, y: 2, w: 1, h: 1}, 'd': {x: 3, y: 2, w: 1, h: 1}, 'f': {x: 4, y: 2, w: 1, h: 1}, 'g': {x: 5, y: 2, w: 1, h: 1}, 'lsft': {x: 0, y: 3, w: 1, h: 1}, 'z': {x: 1, y: 3, w: 1, h: 1}, 'x': {x: 2, y: 3, w: 1, h: 1}, 'c': {x: 3, y: 3, w: 1, h: 1}, 'v': {x: 4, y: 3, w: 1, h: 1}, 'b': {x: 5, y: 3, w: 1, h: 1}, 'home': {x: 6, y: 3, w: 1, h: 1}, 'grv': {x: 0, y: 4, w: 1, h: 1}, 'min': {x: 1, y: 4, w: 1, h: 1}, 'left': {x: 2, y: 4, w: 1, h: 1}, 'rght': {x: 3, y: 4, w: 1, h: 1}, 'lctl': {x: 4, y: 4, w: 1, h: 1}, 'lalt': {x: 5, y: 4, w: 1, h: 1}, 'bspc': {x: 5, y: 5, w: 1, h: 1}, 'del': {x: 6, y: 5, w: 1, h: 1}, 'spc': {x: 6, y: 6, w: 1, h: 1}, 'f12': {x: 9, y: 0, w: 1, h: 1}, '6': {x: 10, y: 0, w: 1, h: 1}, '7': {x: 11, y: 0, w: 1, h: 1}, '8': {x: 12, y: 0, w: 1, h: 1}, '9': {x: 13, y: 0, w: 1, h: 1}, '0': {x: 14, y: 0, w: 1, h: 1}, 'bspc': {x: 15, y: 0, w: 1, h: 1}, 'rbrc': {x: 9, y: 1, w: 1, h: 1}, 'y': {x: 10, y: 1, w: 1, h: 1}, 'u': {x: 11, y: 1, w: 1, h: 1}, 'i': {x: 12, y: 1, w: 1, h: 1}, 'o': {x: 13, y: 1, w: 1, h: 1}, 'p': {x: 14, y: 1, w: 1, h: 1}, 'bsls': {x: 15, y: 1, w: 1, h: 1}, 'h': {x: 10, y: 2, w: 1, h: 1}, 'j': {x: 11, y: 2, w: 1, h: 1}, 'k': {x: 12, y: 2, w: 1, h: 1}, 'l': {x: 13, y: 2, w: 1, h: 1}, 'scln': {x: 14, y: 2, w: 1, h: 1}, 'apo': {x: 15, y: 2, w: 1, h: 1}, 'end': {x: 9, y: 3, w: 1, h: 1}, 'n': {x: 10, y: 3, w: 1, h: 1}, 'm': {x: 11, y: 3, w: 1, h: 1}, 'comm': {x: 12, y: 3, w: 1, h: 1}, 'dot': {x: 13, y: 3, w: 1, h: 1}, 'slsh': {x: 14, y: 3, w: 1, h: 1}, 'rsft': {x: 15, y: 3, w: 1, h: 1}, 'lmet': {x: 10, y: 4, w: 1, h: 1}, 'pgup': {x: 11, y: 4, w: 1, h: 1}, 'pgdn': {x: 12, y: 4, w: 1, h: 1}, 'rmet': {x: 13, y: 4, w: 1, h: 1}, 'ralt': {x: 14, y: 4, w: 1, h: 1}, 'up': {x: 15, y: 4, w: 1, h: 1}, 'down': {x: 9, y: 5, w: 1, h: 1}, 'eql': {x: 10, y: 5, w: 1, h: 1}, 'ret': {x: 9, y: 6, w: 2, h: 1}}
+            },
+            'kinesis-freestyle': {
+                defsrc: ['esc', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', '=', '1', '2', '3', '4', '5', 'tab', 'q', 'w', 'e', 'r', 't', 'caps', 'a', 's', 'd', 'f', 'g', 'lsft', 'z', 'x', 'c', 'v', 'b', 'grv', 'ins', 'left', 'rght', 'lctl', 'lalt', 'home', 'end', 'bspc', 'del', 'lmet', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12', '6', '7', '8', '9', '0', '-', 'y', 'u', 'i', 'o', 'p', '\\', 'h', 'j', 'k', 'l', ';', '\'', 'n', 'm', ',', '.', '/', 'rsft', 'up', 'down', '[', ']', 'ralt', 'rctl', 'pgup', 'pgdn', 'rmet', 'spc', 'ret'],
+                layoutData: {'esc': {x: 0, y: 0, w: 1, h: 1}, 'f1': {x: 1, y: 0, w: 1, h: 1}, 'f2': {x: 2, y: 0, w: 1, h: 1}, 'f3': {x: 3, y: 0, w: 1, h: 1}, 'f4': {x: 4, y: 0, w: 1, h: 1}, 'f5': {x: 5, y: 0, w: 1, h: 1}, 'f6': {x: 6, y: 0, w: 1, h: 1}, '=': {x: 0, y: 1, w: 1, h: 1}, '1': {x: 1, y: 1, w: 1, h: 1}, '2': {x: 2, y: 1, w: 1, h: 1}, '3': {x: 3, y: 1, w: 1, h: 1}, '4': {x: 4, y: 1, w: 1, h: 1}, '5': {x: 5, y: 1, w: 1, h: 1}, 'tab': {x: 0, y: 2, w: 1, h: 1}, 'q': {x: 1, y: 2, w: 1, h: 1}, 'w': {x: 2, y: 2, w: 1, h: 1}, 'e': {x: 3, y: 2, w: 1, h: 1}, 'r': {x: 4, y: 2, w: 1, h: 1}, 't': {x: 5, y: 2, w: 1, h: 1}, 'caps': {x: 0, y: 3, w: 1, h: 1}, 'a': {x: 1, y: 3, w: 1, h: 1}, 's': {x: 2, y: 3, w: 1, h: 1}, 'd': {x: 3, y: 3, w: 1, h: 1}, 'f': {x: 4, y: 3, w: 1, h: 1}, 'g': {x: 5, y: 3, w: 1, h: 1}, 'lsft': {x: 0, y: 4, w: 1, h: 1}, 'z': {x: 1, y: 4, w: 1, h: 1}, 'x': {x: 2, y: 4, w: 1, h: 1}, 'c': {x: 3, y: 4, w: 1, h: 1}, 'v': {x: 4, y: 4, w: 1, h: 1}, 'b': {x: 5, y: 4, w: 1, h: 1}, 'grv': {x: 0, y: 5, w: 1, h: 1}, 'ins': {x: 1, y: 5, w: 1, h: 1}, 'left': {x: 2, y: 5, w: 1, h: 1}, 'rght': {x: 3, y: 5, w: 1, h: 1}, 'lctl': {x: 2, y: 6, w: 1, h: 1}, 'lalt': {x: 3, y: 6, w: 1, h: 1}, 'home': {x: 2, y: 7, w: 1, h: 1}, 'end': {x: 3, y: 7, w: 1, h: 1}, 'bspc': {x: 2, y: 8, w: 1, h: 1}, 'del': {x: 3, y: 8, w: 1, h: 1}, 'lmet': {x: 4, y: 8, w: 1, h: 1}, 'f7': {x: 10, y: 0, w: 1, h: 1}, 'f8': {x: 11, y: 0, w: 1, h: 1}, 'f9': {x: 12, y: 0, w: 1, h: 1}, 'f10': {x: 13, y: 0, w: 1, h: 1}, 'f11': {x: 14, y: 0, w: 1, h: 1}, 'f12': {x: 15, y: 0, w: 1, h: 1}, '6': {x: 10, y: 1, w: 1, h: 1}, '7': {x: 11, y: 1, w: 1, h: 1}, '8': {x: 12, y: 1, w: 1, h: 1}, '9': {x: 13, y: 1, w: 1, h: 1}, '0': {x: 14, y: 1, w: 1, h: 1}, '-': {x: 15, y: 1, w: 1, h: 1}, 'y': {x: 10, y: 2, w: 1, h: 1}, 'u': {x: 11, y: 2, w: 1, h: 1}, 'i': {x: 12, y: 2, w: 1, h: 1}, 'o': {x: 13, y: 2, w: 1, h: 1}, 'p': {x: 14, y: 2, w: 1, h: 1}, '\\': {x: 15, y: 2, w: 1, h: 1}, 'h': {x: 10, y: 3, w: 1, h: 1}, 'j': {x: 11, y: 3, w: 1, h: 1}, 'k': {x: 12, y: 3, w: 1, h: 1}, 'l': {x: 13, y: 3, w: 1, h: 1}, ';': {x: 14, y: 3, w: 1, h: 1}, '\'': {x: 15, y: 3, w: 1, h: 1}, 'n': {x: 10, y: 4, w: 1, h: 1}, 'm': {x: 11, y: 4, w: 1, h: 1}, ',': {x: 12, y: 4, w: 1, h: 1}, '.': {x: 13, y: 4, w: 1, h: 1}, '/': {x: 14, y: 4, w: 1, h: 1}, 'rsft': {x: 15, y: 4, w: 1, h: 1}, 'up': {x: 12, y: 5, w: 1, h: 1}, 'down': {x: 13, y: 5, w: 1, h: 1}, '[': {x: 14, y: 5, w: 1, h: 1}, ']': {x: 15, y: 5, w: 1, h: 1}, 'ralt': {x: 12, y: 6, w: 1, h: 1}, 'rctl': {x: 13, y: 6, w: 1, h: 1}, 'pgup': {x: 12, y: 7, w: 1, h: 1}, 'pgdn': {x: 13, y: 7, w: 1, h: 1}, 'rmet': {x: 11, y: 8, w: 1, h: 1}, 'spc': {x: 12, y: 8, w: 1, h: 1}, 'ret': {x: 13, y: 8, w: 1, h: 1}}
             }
         };
 
@@ -764,9 +657,13 @@
             const tokens = tokenize(text);
             const config = {
                 defsrc: [],
+                layoutData: {},
                 layers: {},
                 aliases: {}
             };
+
+            // Extract layout data from structured comments
+            const layoutData = extractLayoutData(text);
 
             let i = 0;
             while (i < tokens.length) {
@@ -778,7 +675,16 @@
                     const command = expr[0];
 
                     if (command === 'defsrc') {
+                        // Parse defsrc as flat array
                         config.defsrc = expr.slice(1);
+
+                        // Apply layout data if available, otherwise auto-generate
+                        if (layoutData && Object.keys(layoutData).length === config.defsrc.length) {
+                            config.layoutData = layoutData;
+                        } else {
+                            // Auto-generate layout data with basic row-based positioning
+                            config.layoutData = autoGenerateLayoutData(config.defsrc);
+                        }
                     } else if (command === 'deflayer') {
                         const layerName = expr[1];
                         config.layers[layerName] = expr.slice(2);
@@ -797,15 +703,143 @@
             return config;
         }
 
+        // Extract layout data from structured comment block
+        // Format: ;; LAYOUT_DATA_V1
+        //         ;; {"key":"esc","x":0,"y":0,"w":1,"h":1}
+        //         ;; END_LAYOUT_DATA
+        function extractLayoutData(text) {
+            const layoutData = {};
+            const lines = text.split('\n');
+            let inLayoutBlock = false;
+
+            for (const line of lines) {
+                if (line.trim() === ';; LAYOUT_DATA_V1') {
+                    inLayoutBlock = true;
+                    continue;
+                }
+                if (line.trim() === ';; END_LAYOUT_DATA') {
+                    inLayoutBlock = false;
+                    break;
+                }
+                if (inLayoutBlock && line.trim().startsWith(';;')) {
+                    try {
+                        const jsonStr = line.trim().substring(2).trim();
+                        const keyData = JSON.parse(jsonStr);
+                        if (keyData.key) {
+                            layoutData[keyData.key] = {
+                                x: keyData.x,
+                                y: keyData.y,
+                                w: keyData.w,
+                                h: keyData.h
+                            };
+                        }
+                    } catch (e) {
+                        console.error('Failed to parse layout data line:', line, e);
+                    }
+                }
+            }
+
+            return layoutData;
+        }
+
+        // Auto-generate layout data for keys using row-based positioning
+        // This provides a basic fallback when no explicit layout is defined
+        function autoGenerateLayoutData(defsrc) {
+            const layoutData = {};
+            const rows = groupKeysIntoRows(defsrc);
+
+            let y = 0;
+            for (const row of rows) {
+                let x = 0;
+                for (const key of row) {
+                    const dims = getKeyDimensions(key);
+                    layoutData[key] = {
+                        x: x,
+                        y: y,
+                        w: dims.w,
+                        h: dims.h
+                    };
+                    x += dims.w;
+                }
+                y += 1;
+            }
+
+            return layoutData;
+        }
+
+        // Helper to group flat keys into rows based on common patterns
+        function groupKeysIntoRows(flatKeys) {
+            // Common row lengths for standard keyboards
+            const rows = [];
+            let currentRow = [];
+
+            // Simple heuristic: detect row boundaries by key patterns
+            for (let i = 0; i < flatKeys.length; i++) {
+                const key = flatKeys[i];
+                currentRow.push(key);
+
+                // End of row detection based on common patterns
+                const nextKey = flatKeys[i + 1];
+                if (!nextKey ||
+                    (key === 'bspc' && nextKey === 'tab') ||
+                    (key === 'bsls' && nextKey === 'caps') ||
+                    (key === 'ret' && (nextKey === 'lsft' || nextKey === 'lctl')) ||
+                    (key === 'rsft' && nextKey === 'lctl') ||
+                    (key === 'rctl' && !nextKey)) {
+                    rows.push([...currentRow]);
+                    currentRow = [];
+                }
+            }
+
+            // Add any remaining keys
+            if (currentRow.length > 0) {
+                rows.push(currentRow);
+            }
+
+            return rows.length > 0 ? rows : [flatKeys];
+        }
+
         // ==================== CONFIG GENERATOR ====================
         function generateConfig(config) {
             let output = ';; Generated by Kanata Configuration Visualizer\n\n';
 
+            // Generate layout data block
+            if (config.layoutData && Object.keys(config.layoutData).length > 0) {
+                output += ';; LAYOUT_DATA_V1\n';
+                // Sort keys by position (top to bottom, left to right) for readability
+                const sortedKeys = Object.entries(config.layoutData)
+                    .sort((a, b) => {
+                        const [keyA, dataA] = a;
+                        const [keyB, dataB] = b;
+                        if (dataA.y !== dataB.y) return dataA.y - dataB.y;
+                        return dataA.x - dataB.x;
+                    });
+
+                for (const [key, data] of sortedKeys) {
+                    output += `;; ${JSON.stringify({key, x: data.x, y: data.y, w: data.w, h: data.h})}\n`;
+                }
+                output += ';; END_LAYOUT_DATA\n\n';
+            }
+
             // Generate defsrc
             if (config.defsrc && config.defsrc.length > 0) {
-                output += '(defsrc\n  ';
-                output += config.defsrc.join(' ');
-                output += '\n)\n\n';
+                output += '(defsrc\n';
+                // Format in rows for readability, grouping keys by y-position
+                const keysByRow = {};
+                config.defsrc.forEach(key => {
+                    const data = config.layoutData[key];
+                    if (data) {
+                        const y = data.y;
+                        if (!keysByRow[y]) keysByRow[y] = [];
+                        keysByRow[y].push(key);
+                    }
+                });
+
+                const sortedRows = Object.keys(keysByRow).map(Number).sort((a, b) => a - b);
+                for (const y of sortedRows) {
+                    output += '  ' + keysByRow[y].join(' ') + '\n';
+                }
+                output += ')\n\n';
             }
 
             // Generate aliases
@@ -817,11 +851,26 @@
                 output += ')\n\n';
             }
 
-            // Generate layers
+            // Generate layers with same structure as defsrc
             for (const [layerName, actions] of Object.entries(config.layers)) {
-                output += `(deflayer ${layerName}\n  `;
-                output += actions.join(' ');
-                output += '\n)\n\n';
+                output += `(deflayer ${layerName}\n`;
+
+                // Group by rows like defsrc
+                const keysByRow = {};
+                config.defsrc.forEach((key, idx) => {
+                    const data = config.layoutData[key];
+                    if (data) {
+                        const y = data.y;
+                        if (!keysByRow[y]) keysByRow[y] = [];
+                        keysByRow[y].push(actions[idx] || key);
+                    }
+                });
+
+                const sortedRows = Object.keys(keysByRow).map(Number).sort((a, b) => a - b);
+                for (const y of sortedRows) {
+                    output += '  ' + keysByRow[y].join(' ') + '\n';
+                }
+                output += ')\n\n';
             }
 
             return output;
@@ -830,7 +879,6 @@
         // ==================== KEYBOARD RENDERER ====================
         function renderKeyboard() {
             const container = document.getElementById('layersContainer');
-            const layout = KEYBOARD_LAYOUTS[state.ui.keyboardLayout];
 
             if (Object.keys(state.config.layers).length === 0 || state.config.defsrc.length === 0) {
                 container.innerHTML = '';
@@ -871,50 +919,67 @@
                 header.appendChild(actions);
                 layerSection.appendChild(header);
 
-                // Create keyboard for this layer
+                // Create keyboard for this layer - absolute positioning
                 const keyboard = document.createElement('div');
                 keyboard.className = 'keyboard';
-                keyboard.style.gridTemplateColumns = `repeat(${layout.cols * 4}, 1fr)`;
-                keyboard.style.gridTemplateRows = `repeat(${layout.rows}, 1fr)`;
+                keyboard.style.position = 'relative';
+                keyboard.style.display = 'block';
 
-                // Render keys
-                layout.keys.forEach((keyDef) => {
-                    const defsrcIndex = state.config.defsrc.indexOf(keyDef.code);
-                    const action = defsrcIndex >= 0 ? layerActions[defsrcIndex] : keyDef.code;
+                // Calculate keyboard dimensions
+                let maxX = 0, maxY = 0;
+                for (const key of state.config.defsrc) {
+                    const layout = state.config.layoutData[key];
+                    if (layout) {
+                        maxX = Math.max(maxX, layout.x + layout.w);
+                        maxY = Math.max(maxY, layout.y + layout.h);
+                    }
+                }
+
+                const keyUnit = 50; // pixels per key unit
+                keyboard.style.width = `${maxX * keyUnit + 30}px`;
+                keyboard.style.height = `${maxY * keyUnit + 30}px`;
+
+                // Render each key with absolute positioning
+                state.config.defsrc.forEach((keyCode, index) => {
+                    const action = layerActions[index] || keyCode;
+                    const layout = state.config.layoutData[keyCode];
+
+                    if (!layout) return; // Skip if no layout data
 
                     const keyEl = document.createElement('div');
                     keyEl.className = 'key';
-                    keyEl.style.gridColumn = `${Math.floor(keyDef.col * 4)} / span ${Math.floor(keyDef.width * 4)}`;
-                    keyEl.style.gridRow = keyDef.row;
+                    keyEl.style.position = 'absolute';
+                    keyEl.style.left = `${layout.x * keyUnit}px`;
+                    keyEl.style.top = `${layout.y * keyUnit}px`;
+                    keyEl.style.width = `${layout.w * keyUnit - 4}px`;
+                    keyEl.style.height = `${layout.h * keyUnit - 4}px`;
 
                     // Add styling based on action
-                    if (defsrcIndex >= 0) {
-                        if (action !== keyDef.code) {
-                            if (action === '_' || action === 'XX') {
-                                keyEl.classList.add('transparent');
-                            } else if (action.startsWith('@')) {
-                                const aliasValue = state.config.aliases[action.substring(1)];
-                                if (aliasValue && aliasValue.includes('layer')) {
-                                    keyEl.classList.add('layer-switch');
-                                } else {
-                                    keyEl.classList.add('modified');
-                                }
-                            } else if (typeof action === 'string' && action.includes('layer')) {
+                    if (action !== keyCode) {
+                        if (action === '_' || action === 'XX') {
+                            keyEl.classList.add('transparent');
+                        } else if (action.startsWith('@')) {
+                            const aliasValue = state.config.aliases[action.substring(1)];
+                            if (aliasValue && aliasValue.includes('layer')) {
                                 keyEl.classList.add('layer-switch');
-                            } else if (typeof action === 'string' && action.includes('tap-hold')) {
-                                keyEl.classList.add('tap-hold');
                             } else {
                                 keyEl.classList.add('modified');
                             }
+                        } else if (typeof action === 'string' && action.includes('layer')) {
+                            keyEl.classList.add('layer-switch');
+                        } else if (typeof action === 'string' && action.includes('tap-hold')) {
+                            keyEl.classList.add('tap-hold');
+                        } else {
+                            keyEl.classList.add('modified');
                         }
                     }
 
                     keyEl.innerHTML = `
-                        <div class="key-label">${keyDef.code}</div>
+                        <div class="key-label">${keyCode}</div>
                         <div class="key-action">${formatAction(action)}</div>
                     `;
 
-                    keyEl.onclick = () => openKeyModal(defsrcIndex >= 0 ? defsrcIndex : -1, keyDef.code, layerName);
+                    keyEl.onclick = () => openKeyModal(index, keyCode, layerName);
                     keyboard.appendChild(keyEl);
                 });
 
@@ -990,11 +1055,6 @@
 
         // ==================== KEY EDITING ====================
         function openKeyModal(defsrcIndex, keyCode, layerName) {
-            if (defsrcIndex < 0) {
-                alert('This key is not in the defsrc. Add it to defsrc first to configure it.');
-                return;
-            }
-
             state.ui.editingKeyIndex = defsrcIndex;
             state.ui.activeLayer = layerName;  // Track which layer is being edited
 
@@ -1180,26 +1240,27 @@
         }
 
         function createSampleConfig() {
-            // Create a simple sample configuration
+            // Create a simple sample configuration with ANSI 60% layout
+            const defsrc = ['grv', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'min', 'eql', 'bspc',
+                           'tab', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', 'lbrc', 'rbrc', 'bsls',
+                           'caps', 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'scln', 'apo', 'ret',
+                           'lsft', 'z', 'x', 'c', 'v', 'b', 'n', 'm', 'comm', 'dot', 'slsh', 'rsft',
+                           'lctl', 'lmet', 'lalt', 'spc', 'ralt', 'rmet', 'rctl'];
+
             const sampleConfig = {
-                defsrc: ['esc', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12', 'prnt',
-                        'grv', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'min', 'eql', 'bspc',
-                        'tab', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', 'lbrc', 'rbrc', 'bsls',
-                        'caps', 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'scln', 'apo', 'ret',
-                        'lsft', 'z', 'x', 'c', 'v', 'b', 'n', 'm', 'comm', 'dot', 'slsh', 'rsft',
-                        'lctl', 'lmet', 'lalt', 'spc', 'ralt', 'rmet', 'rctl'],
+                defsrc: defsrc,
+                layoutData: autoGenerateLayoutData(defsrc),
                 layers: {
-                    base: ['esc', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12', 'prnt',
-                          'grv', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'min', 'eql', 'bspc',
+                    base: ['grv', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'min', 'eql', 'bspc',
                           'tab', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', 'lbrc', 'rbrc', 'bsls',
                           '@cap', 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'scln', 'apo', 'ret',
                           'lsft', 'z', 'x', 'c', 'v', 'b', 'n', 'm', 'comm', 'dot', 'slsh', 'rsft',
                           'lctl', 'lmet', 'lalt', 'spc', 'ralt', '@num', 'rctl'],
-                    numbers: ['_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_',
-                             '_', '_', '_', '_', '_', '_', '_', '7', '8', '9', '_', '_', '_', '_',
-                             '_', '_', '_', '_', '_', '_', '_', '4', '5', '6', '_', '_', '_',
-                             '_', '_', '_', '_', '_', '_', '_', '1', '2', '3', '_', '_',
-                             '_', '_', '_', '0', '_', '_', '_']
+                    numbers: ['_', '_', '_', '_', '_', '_', '_', '7', '8', '9', '_', '_', '_', '_',
+                             '_', '_', '_', '_', '_', '_', '_', '4', '5', '6', '_', '_', '_', '_',
+                             '_', '_', '_', '_', '_', '_', '_', '1', '2', '3', '_', '_', '_',
+                             '_', '_', '_', '_', '_', '_', '_', '_', '0', '_', '_', '_',
+                             '_', '_', '_', '_', '_', '_', '_']
                 },
                 aliases: {
                     cap: '(tap-hold esc lctl 200)',
@@ -1211,9 +1272,191 @@
             renderKeyboard();
         }
 
-        function switchLayout(layout) {
-            state.ui.keyboardLayout = layout;
+        // ==================== LAYOUT MANAGEMENT ====================
+        const LAYOUT_PRESETS = {
+            'ansi-60': `grv  1    2    3    4    5    6    7    8    9    0    -    =    bspc
+tab  q    w    e    r    t    y    u    i    o    p    [    ]    \\
+caps a    s    d    f    g    h    j    k    l    ;    '    ret
+lsft z    x    c    v    b    n    m    ,    .    /    rsft
+lctl lmet lalt           spc            ralt rmet menu rctl`,
+
+            'ansi-tkl': `esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12       prnt slck paus
+grv  1    2    3    4    5    6    7    8    9    0    -    =    bspc  ins  home pgup
+tab  q    w    e    r    t    y    u    i    o    p    [    ]    \\     del  end  pgdn
+caps a    s    d    f    g    h    j    k    l    ;    '    ret
+lsft z    x    c    v    b    n    m    ,    .    /    rsft            up
+lctl lmet lalt           spc            ralt rmet menu rctl       left down rght`,
+
+            'ansi-full': `esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12       prnt slck paus    nlck kp/  kp*  kp-
+grv  1    2    3    4    5    6    7    8    9    0    -    =    bspc  ins  home pgup    kp7  kp8  kp9  kp+
+tab  q    w    e    r    t    y    u    i    o    p    [    ]    \\     del  end  pgdn    kp4  kp5  kp6
+caps a    s    d    f    g    h    j    k    l    ;    '    ret                          kp1  kp2  kp3  kprt
+lsft z    x    c    v    b    n    m    ,    .    /    rsft            up               kp0  kp.
+lctl lmet lalt           spc            ralt rmet menu rctl       left down rght`,
+
+            'iso-full': `esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12       prnt slck paus    nlck kp/  kp*  kp-
+grv  1    2    3    4    5    6    7    8    9    0    -    =    bspc  ins  home pgup    kp7  kp8  kp9  kp+
+tab  q    w    e    r    t    y    u    i    o    p    [    ]         del  end  pgdn    kp4  kp5  kp6
+caps a    s    d    f    g    h    j    k    l    ;    '    nuhs ret                     kp1  kp2  kp3  kprt
+lsft nubs z    x    c    v    b    n    m    ,    .    /    rsft       up               kp0  kp.
+lctl lmet lalt           spc            ralt rmet menu rctl       left down rght`,
+
+            'ergodox': `esc  1    2    3    4    5    f11
+tab  q    w    e    r    t    lbrc
+caps a    s    d    f    g
+lsft z    x    c    v    b    home
+grv  min  left rght lctl lalt
+bspc del  spc
+f12  6    7    8    9    0    bspc
+rbrc y    u    i    o    p    bsls
+h    j    k    l    scln apo
+end  n    m    comm dot  slsh rsft
+lmet pgup pgdn rmet ralt up   down eql  ret
+ret`,
+
+            'kinesis-freestyle': `esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
+=    1    2    3    4    5
+tab  q    w    e    r    t
+caps a    s    d    f    g
+lsft z    x    c    v    b
+grv  ins  left rght
+lctl lalt
+home end
+bspc del  lmet
+6    7    8    9    0    -
+y    u    i    o    p    \\
+h    j    k    l    ;    '
+n    m    ,    .    /    rsft
+up   down [    ]
+ralt rctl
+pgup pgdn
+rmet spc  ret`
+        };
+
+        function openLayoutModal() {
+            document.getElementById('presetLayout').value = '';
+            document.getElementById('layoutPreview').innerHTML = 'Select a layout to see preview';
+            document.getElementById('layoutModal').classList.add('active');
+        }
+
+        function closeLayoutModal() {
+            document.getElementById('layoutModal').classList.remove('active');
+        }
+
+        function applySelectedLayout() {
+            const preset = document.getElementById('presetLayout').value;
+            if (!preset) {
+                alert('Please select a keyboard layout');
+                return;
+            }
+
+            // Check if we have a precise layout definition
+            if (PRECISE_LAYOUTS[preset]) {
+                const layout = PRECISE_LAYOUTS[preset];
+
+                // Save old defsrc for preserving layer mappings
+                const oldDefsrc = state.config.defsrc || [];
+
+                // Apply the precise layout
+                state.config.defsrc = layout.defsrc.slice();
+                state.config.layoutData = JSON.parse(JSON.stringify(layout.layoutData));
+
+                // Update all layers to match new defsrc length
+                for (const [layerName, layerActions] of Object.entries(state.config.layers)) {
+                    const newActions = [];
+                    // For each key in new defsrc, try to preserve the action from the old config
+                    layout.defsrc.forEach((keyCode) => {
+                        const oldIndex = oldDefsrc.indexOf(keyCode);
+                        if (oldIndex >= 0 && layerActions[oldIndex]) {
+                            newActions.push(layerActions[oldIndex]);
+                        } else {
+                            // New key or not found in old layout - use passthrough
+                            newActions.push(keyCode);
+                        }
+                    });
+                    state.config.layers[layerName] = newActions;
+                }
+
+                // Ensure we have at least a base layer
+                if (Object.keys(state.config.layers).length === 0) {
+                    state.config.layers.base = layout.defsrc.slice();
+                    state.ui.activeLayer = 'base';
+                }
+
+                closeLayoutModal();
+                renderKeyboard();
+                return;
+            }
+
+            // Fallback to old parsing method for layouts without precise definitions
+            const layoutText = LAYOUT_PRESETS[preset];
+            if (!layoutText) {
+                alert('Invalid layout selected');
+                return;
+            }
+
+            // Parse the preset layout
+            parseAndApplyLayout(layoutText);
+            closeLayoutModal();
             renderKeyboard();
+        }
+
+        function parseAndApplyLayout(layoutText) {
+            // Parse the multi-line input - each line is a row
+            const lines = layoutText.split('\n');
+            const newDefsrc = [];
+            const newLayoutData = {};
+
+            let y = 0;
+            for (const line of lines) {
+                // Remove comments and extract just the keys
+                const keysOnly = line.replace(/;;.*$/, '').trim();
+                const keys = keysOnly.split(/\s+/).filter(k => k.length > 0);
+
+                if (keys.length > 0) {
+                    let x = 0;
+                    for (const key of keys) {
+                        newDefsrc.push(key);
+                        const dims = getKeyDimensions(key);
+                        newLayoutData[key] = {
+                            x: x,
+                            y: y,
+                            w: dims.w,
+                            h: dims.h
+                        };
+                        x += dims.w;
+                    }
+                    y += 1;
+                }
+            }
+
+            if (newDefsrc.length === 0) {
+                alert('Invalid layout - no keys found');
+                return;
+            }
+
+            // Update defsrc
+            const oldDefsrc = state.config.defsrc || [];
+            state.config.defsrc = newDefsrc;
+            state.config.layoutData = newLayoutData;
+
+            // Update all layers to match new defsrc length
+            for (const [layerName, layerActions] of Object.entries(state.config.layers)) {
+                const newActions = [];
+
+                // For each key in new defsrc, try to preserve the action from the old config
+                newDefsrc.forEach((keyCode) => {
+                    const oldIndex = oldDefsrc.indexOf(keyCode);
+                    if (oldIndex >= 0 && layerActions[oldIndex]) {
+                        newActions.push(layerActions[oldIndex]);
+                    } else {
+                        // New key or not found in old layout - use passthrough
+                        newActions.push(keyCode);
+                    }
+                });
+
+                state.config.layers[layerName] = newActions;
+            }
         }
 
         // ==================== ALIAS MANAGEMENT ====================

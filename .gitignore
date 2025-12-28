@@ -7,6 +7,7 @@ node_modules/
 # Playwright
 playwright-report/
 test-results/
+.playwright-mcp/
 
 # IDEs
 .vscode/
@@ -41,3 +42,6 @@ test-results/
 auto-save-list
 tramp
 .\#*
+
+# etc
+__pycache__/
