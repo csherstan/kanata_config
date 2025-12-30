@@ -252,30 +252,30 @@ test.describe('Kanata Visualizer - Key Mapping Types', () => {
     await page.click('#editAliasModal button:has-text("Cancel")');
   });
 
-  test('should switch between ANSI and ISO layouts', async ({ page }) => {
+  test('should switch between different keyboard layouts', async ({ page }) => {
     const layoutSelector = page.locator('#layoutSelector');
 
     // Select ANSI-60 layout
     await layoutSelector.selectOption('ansi-60');
     await page.waitForTimeout(500);
 
-    // Count keys in ANSI layout
-    const ansiKeyCount = await page.locator('.key').count();
-    expect(ansiKeyCount).toBeGreaterThan(0);
+    // Count keys in ANSI-60 layout
+    const ansi60KeyCount = await page.locator('.key').count();
+    expect(ansi60KeyCount).toBeGreaterThan(0);
 
-    // Switch to ISO full
-    await layoutSelector.selectOption('iso-full');
+    // Switch to ANSI full
+    await layoutSelector.selectOption('ansi-full');
     await page.waitForTimeout(500);
 
     // Verify the selection changed
     const selectedValue = await layoutSelector.inputValue();
-    expect(selectedValue).toBe('iso-full');
+    expect(selectedValue).toBe('ansi-full');
 
-    // ISO should have different number of keys
-    const isoKeyCount = await page.locator('.key').count();
+    // ANSI full should have different number of keys
+    const ansiFullKeyCount = await page.locator('.key').count();
 
-    // ISO full layout has more keys than ANSI 60%
-    expect(isoKeyCount).toBeGreaterThan(ansiKeyCount);
+    // ANSI full layout has more keys than ANSI 60%
+    expect(ansiFullKeyCount).toBeGreaterThan(ansi60KeyCount);
   });
 
   test('should validate config structure', async ({ page }) => {

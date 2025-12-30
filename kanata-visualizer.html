@@ -532,6 +532,8 @@
         }
 
     </style>
+    <!-- Load keyboard layouts -->
+    <script src="layouts/index.js"></script>
 </head>
 <body>
     <div class="container">
@@ -548,11 +550,7 @@
             <button class="btn btn-warning" onclick="openAliasesModal()">Manage Aliases</button>
             <button class="btn" id="layoutEditBtn" onclick="toggleLayoutEditMode()">Edit Keyboard Layout</button>
             <select id="layoutSelector" onchange="onLayoutSelectorChange()" style="padding: 8px 12px; border-radius: 6px; border: 1px solid #ddd; font-size: 14px; cursor: pointer;">
-                <option value="">-- Select Keyboard Layout --</option>
-                <option value="ansi-60">ANSI 60% (61 keys)</option>
-                <option value="ansi-tkl">ANSI TKL (87 keys)</option>
-                <option value="ansi-full">ANSI Full (104 keys)</option>
-                <option value="kinesis-freestyle">Kinesis Freestyle (Gaming)</option>
+                <!-- Options will be populated dynamically from loaded layouts -->
             </select>
         </div>
 
@@ -718,394 +716,6 @@
             return defsrc;
         }
 
-        //  ==================== PRECISE LAYOUT DEFINITIONS ====================
-        // These layouts have exact key positions for proper keyboard visualization
-        const PRECISE_LAYOUTS = {
-            'ansi-60': {
-                defsrc: ['grv', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', 'bspc', 'tab', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\\', 'caps', 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\'', 'ret', 'lsft', 'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/', 'rsft', 'lctl', 'lmet', 'lalt', 'spc', 'ralt', 'rmet', 'menu', 'rctl'],
-                grid: [
-                    ['grv', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', 'bspc'],
-                    ['tab', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\\'],
-                    ['caps', 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\'', 'ret'],
-                    ['lsft', 'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/', 'rsft'],
-                    ['lctl', 'lmet', 'lalt', 'spc', 'ralt', 'rmet', 'menu', 'rctl']
-                ],
-                layoutData: {
-                    'grv': {x: 0, y: 0, w: 1, h: 1},
-                    '1': {x: 0, y: 0, w: 1, h: 1},
-                    '2': {x: 0, y: 0, w: 1, h: 1},
-                    '3': {x: 0, y: 0, w: 1, h: 1},
-                    '4': {x: 0, y: 0, w: 1, h: 1},
-                    '5': {x: 0, y: 0, w: 1, h: 1},
-                    '6': {x: 0, y: 0, w: 1, h: 1},
-                    '7': {x: 0, y: 0, w: 1, h: 1},
-                    '8': {x: 0, y: 0, w: 1, h: 1},
-                    '9': {x: 0, y: 0, w: 1, h: 1},
-                    '0': {x: 0, y: 0, w: 1, h: 1},
-                    '-': {x: 0, y: 0, w: 1, h: 1},
-                    '=': {x: 0, y: 0, w: 1, h: 1},
-                    'bspc': {x: 0, y: 0, w: 2, h: 1},
-                    'tab': {x: 0, y: 0, w: 1.5, h: 1},
-                    'q': {x: 0, y: 0, w: 1, h: 1},
-                    'w': {x: 0, y: 0, w: 1, h: 1},
-                    'e': {x: 0, y: 0, w: 1, h: 1},
-                    'r': {x: 0, y: 0, w: 1, h: 1},
-                    't': {x: 0, y: 0, w: 1, h: 1},
-                    'y': {x: 0, y: 0, w: 1, h: 1},
-                    'u': {x: 0, y: 0, w: 1, h: 1},
-                    'i': {x: 0, y: 0, w: 1, h: 1},
-                    'o': {x: 0, y: 0, w: 1, h: 1},
-                    'p': {x: 0, y: 0, w: 1, h: 1},
-                    '[': {x: 0, y: 0, w: 1, h: 1},
-                    ']': {x: 0, y: 0, w: 1, h: 1},
-                    '\\': {x: 0, y: 0, w: 1.5, h: 1},
-                    'caps': {x: 0, y: 0, w: 1.75, h: 1},
-                    'a': {x: 0, y: 0, w: 1, h: 1},
-                    's': {x: 0, y: 0, w: 1, h: 1},
-                    'd': {x: 0, y: 0, w: 1, h: 1},
-                    'f': {x: 0, y: 0, w: 1, h: 1},
-                    'g': {x: 0, y: 0, w: 1, h: 1},
-                    'h': {x: 0, y: 0, w: 1, h: 1},
-                    'j': {x: 0, y: 0, w: 1, h: 1},
-                    'k': {x: 0, y: 0, w: 1, h: 1},
-                    'l': {x: 0, y: 0, w: 1, h: 1},
-                    ';': {x: 0, y: 0, w: 1, h: 1},
-                    'ret': {x: 0, y: 0, w: 2.25, h: 1},
-                    'lsft': {x: 0, y: 0, w: 2.25, h: 1},
-                    'z': {x: 0, y: 0, w: 1, h: 1},
-                    'x': {x: 0, y: 0, w: 1, h: 1},
-                    'c': {x: 0, y: 0, w: 1, h: 1},
-                    'v': {x: 0, y: 0, w: 1, h: 1},
-                    'b': {x: 0, y: 0, w: 1, h: 1},
-                    'n': {x: 0, y: 0, w: 1, h: 1},
-                    'm': {x: 0, y: 0, w: 1, h: 1},
-                    ',': {x: 0, y: 0, w: 1, h: 1},
-                    '.': {x: 0, y: 0, w: 1, h: 1},
-                    '/': {x: 0, y: 0, w: 1, h: 1},
-                    'rsft': {x: 0, y: 0, w: 2.75, h: 1},
-                    'lctl': {x: 0, y: 0, w: 1.25, h: 1},
-                    'lmet': {x: 0, y: 0, w: 1.25, h: 1},
-                    'lalt': {x: 0, y: 0, w: 1.25, h: 1},
-                    'spc': {x: 0, y: 0, w: 6.25, h: 1},
-                    'ralt': {x: 0, y: 0, w: 1.25, h: 1},
-                    'rmet': {x: 0, y: 0, w: 1.25, h: 1},
-                    'menu': {x: 0, y: 0, w: 1.25, h: 1},
-                    'rctl': {x: 0, y: 0, w: 1.25, h: 1}
-                }
-            },
-            'ansi-tkl': {
-                defsrc: ['esc', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12', 'prnt', 'slck', 'paus', 'grv', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', 'bspc', 'ins', 'home', 'pgup', 'tab', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\\', 'del', 'end', 'pgdn', 'caps', 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\'', 'ret', 'lsft', 'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/', 'rsft', 'up', 'lctl', 'lmet', 'lalt', 'spc', 'ralt', 'rmet', 'menu', 'rctl', 'left', 'down', 'rght'],
-                grid: [
-                    ['esc', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12', 'prnt', 'slck', 'paus'],
-                    ['grv', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', 'bspc', 'ins', 'home', 'pgup'],
-                    ['tab', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\\', 'del', 'end', 'pgdn'],
-                    ['caps', 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\'', 'ret'],
-                    ['lsft', 'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/', 'rsft', 'up'],
-                    ['lctl', 'lmet', 'lalt', 'spc', 'ralt', 'rmet', 'menu', 'rctl', 'left', 'down', 'rght']
-                ],
-                layoutData: {
-                    'esc': {x: 0, y: 0, w: 1, h: 1},
-                    'f1': {x: 1, y: 0, w: 1, h: 1},
-                    'f2': {x: 0, y: 0, w: 1, h: 1},
-                    'f3': {x: 0, y: 0, w: 1, h: 1},
-                    'f4': {x: 0, y: 0, w: 1, h: 1},
-                    'f5': {x: 0.5, y: 0, w: 1, h: 1},
-                    'f6': {x: 0, y: 0, w: 1, h: 1},
-                    'f7': {x: 0, y: 0, w: 1, h: 1},
-                    'f8': {x: 0, y: 0, w: 1, h: 1},
-                    'f9': {x: 0.5, y: 0, w: 1, h: 1},
-                    'f10': {x: 0, y: 0, w: 1, h: 1},
-                    'f11': {x: 0, y: 0, w: 1, h: 1},
-                    'f12': {x: 0, y: 0, w: 1, h: 1},
-                    'prnt': {x: 0.25, y: 0, w: 1, h: 1},
-                    'slck': {x: 0, y: 0, w: 1, h: 1},
-                    'paus': {x: 0, y: 0, w: 1, h: 1},
-                    'grv': {x: 0, y: 0, w: 1, h: 1},
-                    '1': {x: 0, y: 0, w: 1, h: 1},
-                    '2': {x: 0, y: 0, w: 1, h: 1},
-                    '3': {x: 0, y: 0, w: 1, h: 1},
-                    '4': {x: 0, y: 0, w: 1, h: 1},
-                    '5': {x: 0, y: 0, w: 1, h: 1},
-                    '6': {x: 0, y: 0, w: 1, h: 1},
-                    '7': {x: 0, y: 0, w: 1, h: 1},
-                    '8': {x: 0, y: 0, w: 1, h: 1},
-                    '9': {x: 0, y: 0, w: 1, h: 1},
-                    '0': {x: 0, y: 0, w: 1, h: 1},
-                    '-': {x: 0, y: 0, w: 1, h: 1},
-                    '=': {x: 0, y: 0, w: 1, h: 1},
-                    'bspc': {x: 0, y: 0, w: 2, h: 1},
-                    'ins': {x: 0.25, y: 0, w: 1, h: 1},
-                    'home': {x: 0, y: 0, w: 1, h: 1},
-                    'pgup': {x: 0, y: 0, w: 1, h: 1},
-                    'tab': {x: 0, y: 0, w: 1.5, h: 1},
-                    'q': {x: 0, y: 0, w: 1, h: 1},
-                    'w': {x: 0, y: 0, w: 1, h: 1},
-                    'e': {x: 0, y: 0, w: 1, h: 1},
-                    'r': {x: 0, y: 0, w: 1, h: 1},
-                    't': {x: 0, y: 0, w: 1, h: 1},
-                    'y': {x: 0, y: 0, w: 1, h: 1},
-                    'u': {x: 0, y: 0, w: 1, h: 1},
-                    'i': {x: 0, y: 0, w: 1, h: 1},
-                    'o': {x: 0, y: 0, w: 1, h: 1},
-                    'p': {x: 0, y: 0, w: 1, h: 1},
-                    '[': {x: 0, y: 0, w: 1, h: 1},
-                    ']': {x: 0, y: 0, w: 1, h: 1},
-                    '\\': {x: 0, y: 0, w: 1.5, h: 1},
-                    'del': {x: 0.25, y: 0, w: 1, h: 1},
-                    'end': {x: 0, y: 0, w: 1, h: 1},
-                    'pgdn': {x: 0, y: 0, w: 1, h: 1},
-                    'caps': {x: 0, y: 0, w: 1.75, h: 1},
-                    'a': {x: 0, y: 0, w: 1, h: 1},
-                    's': {x: 0, y: 0, w: 1, h: 1},
-                    'd': {x: 0, y: 0, w: 1, h: 1},
-                    'f': {x: 0, y: 0, w: 1, h: 1},
-                    'g': {x: 0, y: 0, w: 1, h: 1},
-                    'h': {x: 0, y: 0, w: 1, h: 1},
-                    'j': {x: 0, y: 0, w: 1, h: 1},
-                    'k': {x: 0, y: 0, w: 1, h: 1},
-                    'l': {x: 0, y: 0, w: 1, h: 1},
-                    ';': {x: 0, y: 0, w: 1, h: 1},
-                    'ret': {x: 0, y: 0, w: 2.25, h: 1},
-                    'lsft': {x: 0, y: 0, w: 2.25, h: 1},
-                    'z': {x: 0, y: 0, w: 1, h: 1},
-                    'x': {x: 0, y: 0, w: 1, h: 1},
-                    'c': {x: 0, y: 0, w: 1, h: 1},
-                    'v': {x: 0, y: 0, w: 1, h: 1},
-                    'b': {x: 0, y: 0, w: 1, h: 1},
-                    'n': {x: 0, y: 0, w: 1, h: 1},
-                    'm': {x: 0, y: 0, w: 1, h: 1},
-                    ',': {x: 0, y: 0, w: 1, h: 1},
-                    '.': {x: 0, y: 0, w: 1, h: 1},
-                    '/': {x: 0, y: 0, w: 1, h: 1},
-                    'rsft': {x: 0, y: 0, w: 2.75, h: 1},
-                    'up': {x: 1.25, y: 0, w: 1, h: 1},
-                    'lctl': {x: 0, y: 0, w: 1.25, h: 1},
-                    'lmet': {x: 0, y: 0, w: 1.25, h: 1},
-                    'lalt': {x: 0, y: 0, w: 1.25, h: 1},
-                    'spc': {x: 0, y: 0, w: 6.25, h: 1},
-                    'ralt': {x: 0, y: 0, w: 1.25, h: 1},
-                    'rmet': {x: 0, y: 0, w: 1.25, h: 1},
-                    'menu': {x: 0, y: 0, w: 1.25, h: 1},
-                    'rctl': {x: 0, y: 0, w: 1.25, h: 1},
-                    'left': {x: 0.25, y: 0, w: 1, h: 1},
-                    'down': {x: 0, y: 0, w: 1, h: 1},
-                    'rght': {x: 0, y: 0, w: 1, h: 1}
-                }
-            },
-            'ansi-full': {
-                defsrc: ['esc', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12', 'prnt', 'slck', 'paus', 'grv', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', 'bspc', 'ins', 'home', 'pgup', 'nlck', 'kp/', 'kp*', 'kp-', 'tab', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\\', 'del', 'end', 'pgdn', 'kp7', 'kp8', 'kp9', 'kp+', 'caps', 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\'', 'ret', 'kp4', 'kp5', 'kp6', 'lsft', 'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/', 'rsft', 'up', 'kp1', 'kp2', 'kp3', 'kprt', 'lctl', 'lmet', 'lalt', 'spc', 'ralt', 'rmet', 'menu', 'rctl', 'left', 'down', 'rght', 'kp0', 'kp.'],
-                grid: [
-                    ['esc', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12', 'prnt', 'slck', 'paus'],
-                    ['grv', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', 'bspc', 'ins', 'home', 'pgup', 'nlck', 'kp/', 'kp*', 'kp-'],
-                    ['tab', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\\', 'del', 'end', 'pgdn', 'kp7', 'kp8', 'kp9', 'kp+'],
-                    ['caps', 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\'', 'ret', 'kp4', 'kp5', 'kp6'],
-                    ['lsft', 'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/', 'rsft', 'up', 'kp1', 'kp2', 'kp3', 'kprt'],
-                    ['lctl', 'lmet', 'lalt', 'spc', 'ralt', 'rmet', 'menu', 'rctl', 'left', 'down', 'rght', 'kp0', 'kp.']
-                ],
-                layoutData: {
-                    'esc': {x: 0, y: 0, w: 1, h: 1},
-                    'f1': {x: 1.0, y: 0, w: 1, h: 1},
-                    'f2': {x: 0, y: 0, w: 1, h: 1},
-                    'f3': {x: 0, y: 0, w: 1, h: 1},
-                    'f4': {x: 0, y: 0, w: 1, h: 1},
-                    'f5': {x: 0.5, y: 0, w: 1, h: 1},
-                    'f6': {x: 0, y: 0, w: 1, h: 1},
-                    'f7': {x: 0, y: 0, w: 1, h: 1},
-                    'f8': {x: 0, y: 0, w: 1, h: 1},
-                    'f9': {x: 0.5, y: 0, w: 1, h: 1},
-                    'f10': {x: 0, y: 0, w: 1, h: 1},
-                    'f11': {x: 0, y: 0, w: 1, h: 1},
-                    'f12': {x: 0, y: 0, w: 1, h: 1},
-                    'prnt': {x: 0.25, y: 0, w: 1, h: 1},
-                    'slck': {x: 0, y: 0, w: 1, h: 1},
-                    'paus': {x: 0, y: 0, w: 1, h: 1},
-                    'grv': {x: 0, y: 0, w: 1, h: 1},
-                    '1': {x: 0, y: 0, w: 1, h: 1},
-                    '2': {x: 0, y: 0, w: 1, h: 1},
-                    '3': {x: 0, y: 0, w: 1, h: 1},
-                    '4': {x: 0, y: 0, w: 1, h: 1},
-                    '5': {x: 0, y: 0, w: 1, h: 1},
-                    '6': {x: 0, y: 0, w: 1, h: 1},
-                    '7': {x: 0, y: 0, w: 1, h: 1},
-                    '8': {x: 0, y: 0, w: 1, h: 1},
-                    '9': {x: 0, y: 0, w: 1, h: 1},
-                    '0': {x: 0, y: 0, w: 1, h: 1},
-                    '-': {x: 0, y: 0, w: 1, h: 1},
-                    '=': {x: 0, y: 0, w: 1, h: 1},
-                    'bspc': {x: 0, y: 0, w: 2, h: 1},
-                    'ins': {x: 0.25, y: 0, w: 1, h: 1},
-                    'home': {x: 0, y: 0, w: 1, h: 1},
-                    'pgup': {x: 0, y: 0, w: 1, h: 1},
-                    'nlck': {x: 0.25, y: 0, w: 1, h: 1},
-                    'kp/': {x: 0, y: 0, w: 1, h: 1},
-                    'kp*': {x: 0, y: 0, w: 1, h: 1},
-                    'kp-': {x: 0, y: 0, w: 1, h: 1},
-                    'tab': {x: 0, y: 0, w: 1.5, h: 1},
-                    'q': {x: 0, y: 0, w: 1, h: 1},
-                    'w': {x: 0, y: 0, w: 1, h: 1},
-                    'e': {x: 0, y: 0, w: 1, h: 1},
-                    'r': {x: 0, y: 0, w: 1, h: 1},
-                    't': {x: 0, y: 0, w: 1, h: 1},
-                    'y': {x: 0, y: 0, w: 1, h: 1},
-                    'u': {x: 0, y: 0, w: 1, h: 1},
-                    'i': {x: 0, y: 0, w: 1, h: 1},
-                    'o': {x: 0, y: 0, w: 1, h: 1},
-                    'p': {x: 0, y: 0, w: 1, h: 1},
-                    '[': {x: 0, y: 0, w: 1, h: 1},
-                    ']': {x: 0, y: 0, w: 1, h: 1},
-                    '\\': {x: 0, y: 0, w: 1.5, h: 1},
-                    'del': {x: 0.25, y: 0, w: 1, h: 1},
-                    'end': {x: 0, y: 0, w: 1, h: 1},
-                    'pgdn': {x: 0, y: 0, w: 1, h: 1},
-                    'kp7': {x: 0.25, y: 0, w: 1, h: 1},
-                    'kp8': {x: 0, y: 0, w: 1, h: 1},
-                    'kp9': {x: 0, y: 0, w: 1, h: 1},
-                    'kp+': {x: 0, y: 0, w: 1, h: 2},
-                    'caps': {x: 0, y: 0, w: 1.75, h: 1},
-                    'a': {x: 0, y: 0, w: 1, h: 1},
-                    's': {x: 0, y: 0, w: 1, h: 1},
-                    'd': {x: 0, y: 0, w: 1, h: 1},
-                    'f': {x: 0, y: 0, w: 1, h: 1},
-                    'g': {x: 0, y: 0, w: 1, h: 1},
-                    'h': {x: 0, y: 0, w: 1, h: 1},
-                    'j': {x: 0, y: 0, w: 1, h: 1},
-                    'k': {x: 0, y: 0, w: 1, h: 1},
-                    'l': {x: 0, y: 0, w: 1, h: 1},
-                    ';': {x: 0, y: 0, w: 1, h: 1},
-                    'ret': {x: 0, y: 0, w: 2.25, h: 1},
-                    'kp4': {x: 4.5, y: 0, w: 1, h: 1},
-                    'kp5': {x: 0, y: 0, w: 1, h: 1},
-                    'kp6': {x: 0, y: 0, w: 1, h: 1},
-                    'lsft': {x: 0, y: 0, w: 2.25, h: 1},
-                    'z': {x: 0, y: 0, w: 1, h: 1},
-                    'x': {x: 0, y: 0, w: 1, h: 1},
-                    'c': {x: 0, y: 0, w: 1, h: 1},
-                    'v': {x: 0, y: 0, w: 1, h: 1},
-                    'b': {x: 0, y: 0, w: 1, h: 1},
-                    'n': {x: 0, y: 0, w: 1, h: 1},
-                    'm': {x: 0, y: 0, w: 1, h: 1},
-                    ',': {x: 0, y: 0, w: 1, h: 1},
-                    '.': {x: 0, y: 0, w: 1, h: 1},
-                    '/': {x: 0, y: 0, w: 1, h: 1},
-                    'rsft': {x: 0, y: 0, w: 2.75, h: 1},
-                    'up': {x: 1.25, y: 0, w: 1, h: 1},
-                    'kp1': {x: 1.25, y: 0, w: 1, h: 1},
-                    'kp2': {x: 0, y: 0, w: 1, h: 1},
-                    'kp3': {x: 0, y: 0, w: 1, h: 1},
-                    'kprt': {x: 0, y: 0, w: 1, h: 2},
-                    'lctl': {x: 0, y: 0, w: 1.25, h: 1},
-                    'lmet': {x: 0, y: 0, w: 1.25, h: 1},
-                    'lalt': {x: 0, y: 0, w: 1.25, h: 1},
-                    'spc': {x: 0, y: 0, w: 6.25, h: 1},
-                    'ralt': {x: 0, y: 0, w: 1.25, h: 1},
-                    'rmet': {x: 0, y: 0, w: 1.25, h: 1},
-                    'menu': {x: 0, y: 0, w: 1.25, h: 1},
-                    'rctl': {x: 0, y: 0, w: 1.25, h: 1},
-                    'left': {x: 0.25, y: 0, w: 1, h: 1},
-                    'down': {x: 0, y: 0, w: 1, h: 1},
-                    'rght': {x: 0, y: 0, w: 1, h: 1},
-                    'kp0': {x: 0.25, y: 0, w: 2, h: 1},
-                    'kp.': {x: 0, y: 0, w: 1, h: 1}
-                }
-            },
-            'kinesis-freestyle': {
-                defsrc: ['esc', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12', '=', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', 'tab', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '\\', 'caps', 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\'', 'lsft', 'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/', 'rsft', 'grv', 'ins', 'left', 'rght', 'up', 'down', '[', ']', 'lctl', 'lalt', 'ralt', 'rctl', 'home', 'end', 'pgup', 'pgdn', 'bspc', 'del', 'lmet', 'rmet', 'spc', 'ret'],
-                grid: [
-                    ['esc', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12' ,'prnt', 'slck', 'paus', 'del'],
-                    ['grv', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', 'bspc', 'home'],
-                    ['tab', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']','\\', 'end'],
-                    ['caps', 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\'', 'ret', 'pgup'],
-                    ['lsft', 'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/', 'rsft', 'up', 'pgdn'],
-                    ['lctl', 'lmet', 'lalt', 'spc', 'ralt', 'rctl', 'left', 'down', 'rght'],
-                ],
-                layoutData: {
-                    'esc': {x: 0, y: 0, w: 1, h: 1},
-                    'f1': {x: 1.0, y: 0, w: 1, h: 1},
-                    'f2': {x: 0, y: 0, w: 1, h: 1},
-                    'f3': {x: 0, y: 0, w: 1, h: 1},
-                    'f4': {x: 0, y: 0, w: 1, h: 1},
-                    'f5': {x: 0, y: 0, w: 1, h: 1},
-                    'f6': {x: 0, y: 0, w: 1, h: 1},
-                    'f7': {x: 0, y: 0, w: 1, h: 1},
-                    'f8': {x: 2, y: 0, w: 1, h: 1},
-                    'f9': {x: 0, y: 0, w: 1, h: 1},
-                    'f10': {x: 0, y: 0, w: 1, h: 1},
-                    'f11': {x: 0, y: 0, w: 1, h: 1},
-                    'f12': {x: 0, y: 0, w: 1, h: 1},
-                    'prnt': {x: 0, y: 0, w: 1, h: 1},
-                    'slck': {x: 0, y: 0, w: 1, h: 1},
-                    'paus': {x: 0, y: 0, w: 1, h: 1},
-                    'del': {x: 0, y: 0, w: 1, h: 1},
-                    'grv': {x: 2, y: 0, w: 1, h: 1},
-                    '1': {x: 0, y: 0, w: 1, h: 1},
-                    '2': {x: 0, y: 0, w: 1, h: 1},
-                    '3': {x: 0, y: 0, w: 1, h: 1},
-                    '4': {x: 0, y: 0, w: 1, h: 1},
-                    '5': {x: 0, y: 0, w: 1, h: 1},
-                    '6': {x: 0, y: 0, w: 1, h: 1},
-                    '7': {x: 2, y: 0, w: 1, h: 1},
-                    '8': {x: 0, y: 0, w: 1, h: 1},
-                    '9': {x: 0, y: 0, w: 1, h: 1},
-                    '0': {x: 0, y: 0, w: 1, h: 1},
-                    '-': {x: 0, y: 0, w: 1, h: 1},
-                    '=': {x: 0, y: 0, w: 1, h: 1},
-                    'bspc': {x: 0, y: 0, w: 2, h: 1},
-                    'home': {x: 0, y: 0, w: 1, h: 1},
-                    'tab': {x: 2, y: 0, w: 1.5, h: 1},
-                    'q': {x: 0, y: 0, w: 1, h: 1},
-                    'w': {x: 0, y: 0, w: 1, h: 1},
-                    'e': {x: 0, y: 0, w: 1, h: 1},
-                    'r': {x: 0, y: 0, w: 1, h: 1},
-                    't': {x: 0, y: 0, w: 1, h: 1},
-                    'y': {x: 2.0, y: 0, w: 1, h: 1},
-                    'u': {x: 0, y: 0, w: 1, h: 1},
-                    'i': {x: 0, y: 0, w: 1, h: 1},
-                    'o': {x: 0, y: 0, w: 1, h: 1},
-                    'p': {x: 0, y: 0, w: 1, h: 1},
-                    '[': {x: 0, y: 0, w: 1, h: 1},
-                    ']': {x: 0, y: 0, w: 1, h: 1},
-                    '\\': {x: 0, y: 0, w: 1.5, h: 1},
-                    'end': {x: 0, y: 0, w: 1, h: 1},
-                    'caps': {x: 2, y: 0, w: 2, h: 1},
-                    'a': {x: 0, y: 0, w: 1, h: 1},
-                    's': {x: 0, y: 0, w: 1, h: 1},
-                    'd': {x: 0, y: 0, w: 1, h: 1},
-                    'f': {x: 0, y: 0, w: 1, h: 1},
-                    'g': {x: 0, y: 0, w: 1, h: 1},
-                    'h': {x: 1.75, y: 0, w: 1, h: 1},
-                    'j': {x: 0, y: 0, w: 1, h: 1},
-                    'k': {x: 0, y: 0, w: 1, h: 1},
-                    'l': {x: 0, y: 0, w: 1, h: 1},
-                    ';': {x: 0, y: 0, w: 1, h: 1},
-                    '\'': {x: 0, y: 0, w: 1, h: 1},
-                    'ret': {x: 0, y: 0, w: 2.25, h: 1},
-                    'pgup': {x: 0, y: 0, w: 1, h: 1},
-                    'lsft': {x: 2, y: 0, w: 2.5, h: 1},
-                    'z': {x: 0, y: 0, w: 1, h: 1},
-                    'x': {x: 0, y: 0, w: 1, h: 1},
-                    'c': {x: 0, y: 0, w: 1, h: 1},
-                    'v': {x: 0, y: 0, w: 1, h: 1},
-                    'b': {x: 0, y: 0, w: 1, h: 1},
-                    'n': {x: 1.75, y: 0, w: 1, h: 1},
-                    'm': {x: 0, y: 0, w: 1, h: 1},
-                    ',': {x: 0, y: 0, w: 1, h: 1},
-                    '.': {x: 0, y: 0, w: 1, h: 1},
-                    '/': {x: 0, y: 0, w: 1, h: 1},
-                    'rsft': {x: 0, y: 0, w: 1.75, h: 1},
-                    'up': {x: 0, y: 0, w: 1, h: 1},
-                    'pgdn': {x: 0, y: 0, w: 1, h: 1},
-                    'lctl': {x: 2, y: 0, w: 1.5, h: 1},
-                    'lmet': {x: 0, y: 0, w: 1, h: 1},
-                    'lalt': {x: 0, y: 0, w: 1.5, h: 1},
-                    'spc': {x: 0, y: 0, w: 7.75, h: 1},
-                    'ralt': {x: 0, y: 0, w: 1.5, h: 1},
-                    'rctl': {x: 0, y: 0, w: 1.75, h: 1},
-                    'left': {x: 0, y: 0, w: 1, h: 1},
-                    'down': {x: 0, y: 0, w: 1, h: 1},
-                    'rght': {x: 0, y: 0, w: 1, h: 1},
-                }
-            }
-        };
 
         // ==================== CONFIG PARSER ====================
         function tokenize(text) {
@@ -1937,6 +1547,27 @@ pgup pgdn
 rmet spc  ret`
         };
 
+        function populateLayoutSelector() {
+            const selector = document.getElementById('layoutSelector');
+            selector.innerHTML = ''; // Clear existing options
+
+            // Get all layout IDs and sort them
+            const layoutIds = Object.keys(window.KEYBOARD_LAYOUTS).sort();
+
+            layoutIds.forEach(function(id) {
+                const layout = window.KEYBOARD_LAYOUTS[id];
+                const option = document.createElement('option');
+                option.value = id;
+                option.textContent = layout.name || id;
+                selector.appendChild(option);
+            });
+
+            // Set default selection to ansi-full if available
+            if (window.KEYBOARD_LAYOUTS['ansi-full']) {
+                selector.value = 'ansi-full';
+            }
+        }
+
         function onLayoutSelectorChange() {
             const preset = document.getElementById('layoutSelector').value;
             if (!preset) {
@@ -1952,8 +1583,8 @@ rmet spc  ret`
             }
 
             // Check if we have a precise layout definition
-            if (PRECISE_LAYOUTS[preset]) {
-                const layout = PRECISE_LAYOUTS[preset];
+            if (window.KEYBOARD_LAYOUTS[preset]) {
+                const layout = window.KEYBOARD_LAYOUTS[preset];
 
                 // Save old defsrc for preserving layer mappings
                 const oldDefsrc = state.config.defsrc || [];
@@ -2005,8 +1636,13 @@ rmet spc  ret`
             }
 
             // Fallback to old parsing method for layouts without precise definitions
-            const layoutText = LAYOUT_PRESETS[preset];
-            if (!layoutText) {
+            if (!window.KEYBOARD_LAYOUTS[preset] && LAYOUT_PRESETS[preset]) {
+                const layoutText = LAYOUT_PRESETS[preset];
+                if (!layoutText) {
+                    alert('Invalid layout selected');
+                    return;
+                }
+            } else {
                 alert('Invalid layout selected');
                 return;
             }
@@ -2598,29 +2234,35 @@ rmet spc  ret`
 
         // Initialize with default ANSI full keyboard layout
         function initializeDefaultLayout() {
-            // Load ANSI full layout by default
-            const defaultLayout = PRECISE_LAYOUTS['ansi-full'];
+            window.onAllLayoutsLoaded(function() {
+                const defaultLayoutId = 'ansi-full';
+                const layout = window.KEYBOARD_LAYOUTS[defaultLayoutId];
 
-            if (defaultLayout) {
+                if (!layout) {
+                    console.error('Default layout not found:', defaultLayoutId);
+                    return;
+                }
+
                 // Generate defsrc from grid
-                const defsrc = defaultLayout.grid
-                    ? gridToDefsrc(defaultLayout.grid)
-                    : defaultLayout.defsrc.slice();
+                const newDefsrc = gridToDefsrc(layout.grid);
 
-                // Set up the state with the default layout
-                state.config.defsrc = defsrc;
-                state.config.grid = JSON.parse(JSON.stringify(defaultLayout.grid));
-                state.config.layoutData = JSON.parse(JSON.stringify(defaultLayout.layoutData));
+                // Set state
+                state.config.defsrc = newDefsrc;
+                state.config.grid = JSON.parse(JSON.stringify(layout.grid));
+                state.config.layoutData = JSON.parse(JSON.stringify(layout.layoutData));
 
-                // Create a default base layer with passthrough (each key maps to itself)
-                state.config.layers.base = defsrc.slice();
+                // Initialize base layer
+                state.config.layers.base = newDefsrc.map(function() { return '_'; });
                 state.ui.activeLayer = 'base';
-            }
 
-            renderKeyboard();
+                // Populate selector and render
+                populateLayoutSelector();
+                renderKeyboard();
+            });
         }
 
-        initializeDefaultLayout();
+        // Initialize when DOM is ready
+        document.addEventListener('DOMContentLoaded', initializeDefaultLayout);
     </script>
 </body>
 </html>
