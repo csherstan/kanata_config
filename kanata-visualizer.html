@@ -1643,16 +1643,50 @@
                 return;
             }
 
+            // Generate the layout's defsrc from its grid (if available) or use its defsrc
+            const layoutDefsrc = selectedLayout.grid
+                ? gridToDefsrc(selectedLayout.grid)
+                : selectedLayout.defsrc.slice();
+
             // Apply layout data to the config
-            // We use the layout's layoutData structure but need to ensure it matches
-            // the keys in the config's defsrc
             if (selectedLayout.grid) {
                 pendingConfig.grid = JSON.parse(JSON.stringify(selectedLayout.grid));
             }
 
             // Use the layout's layoutData directly
-            // If the config has different keys than the layout, we'll just use auto-generation
             pendingConfig.layoutData = JSON.parse(JSON.stringify(selectedLayout.layoutData));
+
+            // Check if the layout has more keys than the imported config
+            const configDefsrc = pendingConfig.defsrc;
+            const missingKeys = [];
+
+            // Find keys that are in the layout but not in the config
+            for (const layoutKey of layoutDefsrc) {
+                if (!configDefsrc.includes(layoutKey)) {
+                    missingKeys.push(layoutKey);
+                }
+            }
+
+            // Add missing keys to defsrc with direct mapping (key maps to itself)
+            if (missingKeys.length > 0) {
+                // Add missing keys to the config's defsrc
+                pendingConfig.defsrc = pendingConfig.defsrc.concat(missingKeys);
+
+                // Update all layers to include the missing keys with direct mappings
+                for (const layerName in pendingConfig.layers) {
+                    const layer = pendingConfig.layers[layerName];
+                    // Add the missing keys with their direct mapping
+                    for (const missingKey of missingKeys) {
+                        layer.push(missingKey);
+                    }
+                }
+
+                // Update the grid to match the layout's grid structure
+                // This ensures the keys are positioned correctly
+                if (selectedLayout.grid) {
+                    pendingConfig.grid = JSON.parse(JSON.stringify(selectedLayout.grid));
+                }
+            }
 
             // Update the state with the now-complete config
             state.config = pendingConfig;
