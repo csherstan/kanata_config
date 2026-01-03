@@ -691,6 +691,26 @@
         </div>
     </div>
 
+    <div id="layoutSelectionModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Select Keyboard Layout</div>
+            <div class="info-box">
+                <h3>No Layout Data Found</h3>
+                <p>This configuration file doesn't include layout positioning data. Please select a keyboard layout to visualize this configuration.</p>
+            </div>
+            <div class="form-group">
+                <label>Keyboard Layout</label>
+                <select id="layoutSelectionDropdown">
+                    <!-- Options will be populated dynamically from loaded layouts -->
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeLayoutSelectionModal()">Cancel</button>
+                <button class="btn" onclick="applyLayoutSelection()">Apply Layout</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ==================== STATE MANAGEMENT ====================
         const state = {
@@ -844,13 +864,12 @@
                         // Parse defsrc as flat array
                         config.defsrc = expr.slice(1);
 
-                        // Apply layout data if available, otherwise auto-generate
+                        // Apply layout data if available
                         if (layoutData && Object.keys(layoutData).length === config.defsrc.length) {
                             config.layoutData = layoutData;
-                        } else {
-                            // Auto-generate layout data with basic row-based positioning
-                            config.layoutData = autoGenerateLayoutData(config.defsrc);
                         }
+                        // Note: Don't auto-generate here - let the caller decide what to do
+                        // when no layout data is present
                     } else if (command === 'deflayer') {
                         const layerName = expr[1];
                         config.layers[layerName] = expr.slice(2);
@@ -1527,8 +1546,17 @@
                         return;
                     }
 
-                    state.config = config;
-                    renderKeyboard();
+                    // Check if layout data exists
+                    const hasLayoutData = config.layoutData && Object.keys(config.layoutData).length > 0;
+
+                    if (!hasLayoutData) {
+                        // No layout data found - prompt user to select a layout
+                        openLayoutSelectionModal(config);
+                    } else {
+                        // Layout data exists - load normally
+                        state.config = config;
+                        renderKeyboard();
+                    }
                 } catch (error) {
                     alert('Error parsing config: ' + error.message);
                     console.error(error);
@@ -1553,6 +1581,86 @@
             a.click();
 
             URL.revokeObjectURL(url);
+        }
+
+        // Store pending config for layout selection
+        let pendingConfig = null;
+
+        function openLayoutSelectionModal(config) {
+            // Store the config temporarily
+            pendingConfig = config;
+
+            // Populate the dropdown with available layouts
+            const dropdown = document.getElementById('layoutSelectionDropdown');
+            dropdown.innerHTML = '';
+
+            const layoutIds = Object.keys(window.KEYBOARD_LAYOUTS).sort();
+            layoutIds.forEach(function(id) {
+                const layout = window.KEYBOARD_LAYOUTS[id];
+                const option = document.createElement('option');
+                option.value = id;
+                option.textContent = layout.name || id;
+                dropdown.appendChild(option);
+            });
+
+            // Try to intelligently select a default based on defsrc length
+            const keyCount = config.defsrc.length;
+            let suggestedLayout = 'ansi-full'; // default fallback
+
+            if (keyCount <= 62) {
+                suggestedLayout = 'ansi-60';
+            } else if (keyCount <= 90) {
+                suggestedLayout = 'ansi-tkl';
+            } else if (keyCount <= 104) {
+                suggestedLayout = 'ansi-full';
+            }
+
+            // Set the suggested layout if it exists
+            if (window.KEYBOARD_LAYOUTS[suggestedLayout]) {
+                dropdown.value = suggestedLayout;
+            }
+
+            // Show the modal
+            document.getElementById('layoutSelectionModal').classList.add('active');
+        }
+
+        function closeLayoutSelectionModal() {
+            document.getElementById('layoutSelectionModal').classList.remove('active');
+            pendingConfig = null;
+        }
+
+        function applyLayoutSelection() {
+            if (!pendingConfig) {
+                closeLayoutSelectionModal();
+                return;
+            }
+
+            const selectedLayoutId = document.getElementById('layoutSelectionDropdown').value;
+            const selectedLayout = window.KEYBOARD_LAYOUTS[selectedLayoutId];
+
+            if (!selectedLayout) {
+                alert('Invalid layout selected');
+                return;
+            }
+
+            // Apply layout data to the config
+            // We use the layout's layoutData structure but need to ensure it matches
+            // the keys in the config's defsrc
+            if (selectedLayout.grid) {
+                pendingConfig.grid = JSON.parse(JSON.stringify(selectedLayout.grid));
+            }
+
+            // Use the layout's layoutData directly
+            // If the config has different keys than the layout, we'll just use auto-generation
+            pendingConfig.layoutData = JSON.parse(JSON.stringify(selectedLayout.layoutData));
+
+            // Update the state with the now-complete config
+            state.config = pendingConfig;
+            pendingConfig = null;
+
+            // Close modal and render
+            closeLayoutSelectionModal();
+            renderKeyboard();
         }
 
         function createSampleConfig() {
